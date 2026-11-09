@@ -434,7 +434,7 @@
         (tray.length
           ? tray.map(function (id) {
               return '<button type="button" class="tray-bottle' + (picked === id ? " picked" : "") + '" data-action="pickBottle" data-id="' + id + '" data-peek="' + byId[id].full + '" aria-pressed="' + (picked === id) + '" aria-label="' + esc(conceptLabel(byId[id])) + '">' +
-                '<img src="' + byId[id].shelf + '" alt=""><span class="n">' + id + "</span></button>";
+                '<img src="' + byId[id].shelf + '" alt=""></button>';
             }).join("")
           : '<p class="tray-empty">' + (pickedInSlot ? "Tap here to take it off the line" : "To take a bottle off the line, tap it, then tap here.") + "</p>") +
       "</div>" +
