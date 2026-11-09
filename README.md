@@ -35,6 +35,10 @@ Keyboard: in Activity 1 press `F` for Fit, `N` for No fit, and `←` / `→` to 
 - **GitHub Pages:** push this repo, then go to Settings → Pages → Deploy from branch `main` / root.
 - **Vercel:** import the repo with no framework preset and no build command.
 
+## Updating
+
+`index.html` loads the CSS and JS with a version tag (`?v=11`). After changing code, bump that number so browsers and GitHub Pages load the new files instead of a cached copy.
+
 ## Files
 
 ```
