@@ -30,9 +30,10 @@
 
   var FLOW = [
     { key: "intake", label: "Participant" },
-    { key: "introA", label: "Part A · Fit / No Fit", also: ["partA"] },
+    { key: "introA", label: "Activity 1 · Fit / No fit", also: ["partA"] },
     { key: "board", label: "Review sort" },
-    { key: "introB", label: "Part B · Ranking", also: ["line"] },
+    { key: "introB", label: "Activity 2 · Ranking", also: ["line"] },
+    { key: "introC", label: "Activity 3 · Where it goes", also: ["partC"] },
     { key: "done", label: "Done" }
   ];
 
@@ -155,16 +156,17 @@
 
   // Overall session progress: intake + 11 concepts in A + review + line
   function progressFraction() {
-    var n = C.length, total = n + 4, i = cur ? cur.idx || 0 : 0;
-    var at = { intake: 0, introA: 1, partA: 1 + i, board: 1 + n, introB: 2 + n, line: 3 + n, done: total }[view];
+    var n = C.length, total = 2 * n + 5, i = cur ? cur.idx || 0 : 0;
+    var at = { intake: 0, introA: 1, partA: 1 + i, board: 1 + n, introB: 2 + n, line: 3 + n, introC: 4 + n, partC: 4 + n + i, done: total }[view];
     return at == null ? 0 : at / total;
   }
 
   function stepLabel() {
     var i = cur ? (cur.idx || 0) + 1 : 0;
     return {
-      intake: "Participant", introA: "Part A", partA: "Part A, concept " + i + " of " + C.length,
-      board: "Part A, review", introB: "Part B", line: "Part B, ranking", done: "Done"
+      intake: "Participant", introA: "Activity 1", partA: "Activity 1, concept " + i + " of " + C.length,
+      board: "Activity 1, debrief", introB: "Activity 2", line: "Activity 2, ranking",
+      introC: "Activity 3", partC: "Activity 3, concept " + i + " of " + C.length, done: "Done"
     }[view] || "";
   }
 
@@ -226,7 +228,8 @@
       },
       order: order,
       partA: {}, boardChanges: [],
-      ranking: [], slots: null, rankWhy: "", rankFactors: []
+      ranking: [], slots: null, rankWhy: "", rankFactors: [],
+      place: {}
     };
     if (demo) {            // demo: kept in memory only, never saved or counted
       s.demo = true;
@@ -247,6 +250,10 @@
         var v = Math.random() < 0.5 ? "fit" : "nofit";
         cur.partA[id] = { verdict: v, first: v, beforeBoard: v, ms: 800 + Math.round(Math.random() * 3000) };
       });
+    }
+    if (step === "partC") {
+      cur.slots = shuffle(cur.order.slice());
+      cur.ranking = cur.slots.slice();
     }
     go(step, 0);
   }
@@ -273,13 +280,13 @@
         '<div class="home-top">' +
         "<div>" +
           "<h1>Would you leave it out on display?</h1>" +
-          '<p class="lede">Activity 2 for Team Nudge. Participants judge ' + C.length + " spray concepts on looks alone, then rank all of them from most to least favorite.</p>" +
+          '<p class="lede">Team Nudge. Participants sort ' + C.length + " spray concepts into Fit or No fit, rank them from most to least favorite, then say where in their home each one would go.</p>" +
           '<div class="actions"><button class="btn primary" data-action="new">Start a session</button>' +
           '<button class="btn" data-action="results">See results</button></div>' +
           '<div class="demo-row"><span class="grey small">Try a demo, nothing is saved</span>' +
-            '<button class="link-pill" data-action="demo" data-step="partA">1. Fit / No fit</button>' +
-            '<button class="link-pill" data-action="demo" data-step="board">2. Debrief</button>' +
-            '<button class="link-pill" data-action="demo" data-step="line">3. Ranking</button>' +
+            '<button class="link-pill" data-action="demo" data-step="partA">1. Fit / No fit + debrief</button>' +
+            '<button class="link-pill" data-action="demo" data-step="line">2. Ranking</button>' +
+            '<button class="link-pill" data-action="demo" data-step="partC">3. Where it goes</button>' +
           "</div>" +
         "</div>" +
           (open.length ? '<aside class="resume-list">' +
@@ -303,8 +310,9 @@
 
   function stepLabelFor(s) {
     var i = (s.idx || 0) + 1;
-    return { intake: "at sign-in", introA: "starting Part A", partA: "Part A, " + i + " of " + C.length, board: "reviewing piles",
-      introB: "starting Part B", partB: "starting Part B", rank: "starting Part B", line: "ranking" }[s.step] || "in progress";
+    return { intake: "at sign-in", introA: "starting Activity 1", partA: "Activity 1, " + i + " of " + C.length, board: "Activity 1 debrief",
+      introB: "starting Activity 2", partB: "starting Activity 2", rank: "starting Activity 2", line: "Activity 2 ranking",
+      introC: "starting Activity 3", partC: "Activity 3, " + i + " of " + C.length }[s.step] || "in progress";
   }
 
   VIEWS.intake = function () {
@@ -317,7 +325,7 @@
           '<label class="field"><span>Participant ID</span><input type="text" data-bind="participant.pid" value="' + esc(p.pid) + '"></label>' +
         "</div>" +
         '<div class="nav-row"><span class="grey small">' + (store.settings.randomize ? "Concepts will appear in a shuffled order." : "Concepts will appear in order, 1 to " + C.length + ".") + "</span>" +
-        '<button class="btn primary" data-action="startA" id="startA" ' + (p.name.trim() ? "" : "disabled") + ">Start Part A</button></div>" +
+        '<button class="btn primary" data-action="startA" id="startA" ' + (p.name.trim() ? "" : "disabled") + ">Start Activity 1</button></div>" +
       "</div>"
     );
   };
@@ -325,6 +333,7 @@
   VIEWS.introA = function () {
     return (
       '<div class="narrow">' +
+        '<p class="grey small" style="margin-bottom:12px">Activity 1 of 3</p>' +
         "<h1>Picture each one in your home.</h1>" +
         '<p class="grey-lede">You\'ll see ' + C.length + " spray bottle ideas, one at a time. For each, decide whether you'd be comfortable leaving it out where people can see it. Go with your first impression.</p>" +
         '<div class="legend"><div><b>Fit</b><span class="grey">I\'d leave this out.</span></div><div><b>No fit</b><span class="grey">I\'d put this away.</span></div></div>' +
@@ -374,7 +383,7 @@
     var moved = function (id) { var a = cur.partA[id]; return a.beforeBoard && a.beforeBoard !== a.verdict; };
     return (
       '<div class="sort-head"><div><h1>Debrief - Your 2 Piles</h1><p class="grey" style="margin-top:12px">Changed your mind? You are able to switch sides by clicking any sketch, and switch it back at any time.</p></div>' +
-      '<button class="btn primary" data-action="toIntroB">Continue to Part B</button></div>' +
+      '<button class="btn primary" data-action="toIntroB">Continue to Activity 2</button></div>' +
       '<div class="board">' +
         '<div class="col"><div class="col-head"><h2>Fit</h2><span>' + fits.length + '</span></div><div class="pile">' + fits.map(function (id) { return bottle(id, moved(id)); }).join("") + "</div></div>" +
         '<div class="col"><div class="col-head"><h2>No fit</h2><span>' + nos.length + '</span></div><div class="pile">' + nos.map(function (id) { return bottle(id, moved(id)); }).join("") + "</div></div>" +
@@ -389,9 +398,10 @@
   VIEWS.introB = function () {
     return (
       '<div class="narrow">' +
+        '<p class="grey small" style="margin-bottom:12px">Activity 2 of 3</p>' +
         "<h1>Now rank all eleven.</h1>" +
         '<p class="grey-lede">Tap a bottle, then tap a spot on the line. Your most favorite goes on the left, your least favorite on the right. Tap two placed bottles to swap them.</p>' +
-        '<button class="btn primary" data-action="beginB" style="margin-top:40px">Begin Part B</button>' +
+        '<button class="btn primary" data-action="beginB" style="margin-top:40px">Begin Activity 2</button>' +
       "</div>"
     );
   };
@@ -446,7 +456,41 @@
         "</div></details>" +
         '<div class="nav-row"><button class="link" data-action="toIntroB">Back</button>' +
         '<span style="display:flex;align-items:center;gap:16px">' + (placed < C.length ? '<span class="grey small">' + placed + " of " + C.length + " placed</span>" : "") +
-        '<button class="btn primary" data-action="finish" ' + (placed < C.length ? "disabled" : "") + ">Finish session</button></span></div>" +
+        '<button class="btn primary" data-action="toIntroC" ' + (placed < C.length ? "disabled" : "") + ">Continue to Activity 3</button></span></div>" +
+      "</div>"
+    );
+  };
+
+  VIEWS.introC = function () {
+    return (
+      '<div class="narrow">' +
+        '<p class="grey small" style="margin-bottom:12px">Activity 3 of 3</p>' +
+        "<h1>Where would each one go?</h1>" +
+        '<p class="grey-lede">We\'ll show the bottles one more time. For each, tell us where in your home you\'d put it, and where you\'d use it.</p>' +
+        '<button class="btn primary" data-action="beginC" style="margin-top:40px">Begin Activity 3</button>' +
+      "</div>"
+    );
+  };
+
+  VIEWS.partC = function () {
+    var i = cur.idx, id = cur.order[i], c = byId[id];
+    var base = "place." + id;
+    return (
+      '<div class="eval">' +
+        '<div class="stimulus"><img src="' + c.hero + '" alt="' + esc(conceptLabel(c)) + '"><p class="caption">' + esc(conceptLabel(c)) + "</p></div>" +
+        '<div class="panel">' +
+          '<div class="block"><h2 style="margin-bottom:16px">Where in your home would you put it?</h2>' + chips(base + ".putAt", O.rooms) + "</div>" +
+          '<div class="block" style="margin-top:40px"><h2 style="margin-bottom:16px">Where would you use it?</h2>' + chips(base + ".useAt", O.rooms) + "</div>" +
+          '<details class="mod"' + ((cur.place && cur.place[id] && cur.place[id].note) ? " open" : "") + "><summary>Moderator notes</summary><div>" +
+            textarea(base + ".note", "Quotes and observations") +
+          "</div></details>" +
+          '<div class="nav-row">' +
+            '<button class="link" data-action="prevC">Back</button>' +
+            (i === C.length - 1
+              ? '<button class="btn primary" data-action="finish">Finish session</button>'
+              : '<button class="btn primary" data-action="nextC">Next</button>') +
+          "</div>" +
+        "</div>" +
       "</div>"
     );
   };
@@ -479,7 +523,9 @@
         c: c, n: A.length, fit: fit, fitRate: A.length ? fit / A.length : null,
         avgRank: avg(ranks), firsts: ranks.filter(function (r) { return r === 1; }).length,
         top3: ranks.filter(function (r) { return r <= 3; }).length,
-        moved: A.filter(function (a) { return a.beforeBoard && a.beforeBoard !== a.verdict; }).length
+        moved: A.filter(function (a) { return a.beforeBoard && a.beforeBoard !== a.verdict; }).length,
+        putAt: counts([].concat.apply([], S.map(function (s) { return ((s.place || {})[c.id] || {}).putAt || []; }))).slice(0, 2),
+        useAt: counts([].concat.apply([], S.map(function (s) { return ((s.place || {})[c.id] || {}).useAt || []; }))).slice(0, 2)
       };
     });
   }
@@ -537,12 +583,15 @@
 
       '<div class="section"><h3>By concept</h3><div class="table-wrap"><table><thead><tr>' +
         th("id", "Concept", false) + th("fitRate", "Fit rate", false) + th("avgRank", "Avg rank", true) + th("firsts", "Ranked first", true) + th("top3", "In top 3", true) +
+        "<th>Would put it</th><th>Would use it</th>" +
         "</tr></thead><tbody>" +
         sorted.map(function (r) {
           return "<tr>" +
             '<td><div class="c-cell"><img src="' + r.c.shelf + '" alt=""><span>' + r.c.id + ". " + esc(r.c.name) + "<small>" + esc(r.c.concealment) + "</small></span></div></td>" +
             "<td>" + bar(r.fitRate) + '<span class="grey small">' + (r.n ? r.fit + " of " + r.n + (r.moved ? ", " + r.moved + " moved" : "") : "") + "</span></td>" +
             '<td class="num">' + fmt(r.avgRank) + '</td><td class="num">' + r.firsts + '</td><td class="num">' + r.top3 + "</td>" +
+            '<td class="reasons">' + r.putAt.map(function (x) { return esc(x[0]) + " (" + x[1] + ")"; }).join(", ") + "</td>" +
+            '<td class="reasons">' + r.useAt.map(function (x) { return esc(x[0]) + " (" + x[1] + ")"; }).join(", ") + "</td>" +
           "</tr>";
         }).join("") + "</tbody></table></div>" +
         '<p class="grey small" style="margin-top:12px">Rank 1 is the most favorite. Rankings count finished sessions only.</p></div>' +
@@ -598,7 +647,7 @@
       "concept_id", "concept_name", "concealment", "family", "order_position",
       "A_verdict", "A_first_verdict", "A_verdict_before_board", "A_moved_on_board", "A_decision_seconds",
       "A_mentioned_mechanism", "A_note",
-      "B_rank", "B_reasons", "B_factors_coded", "board_note"
+      "B_rank", "B_reasons", "B_factors_coded", "C_would_put_it", "C_would_use_it", "C_note", "board_note"
     ];
     var lines = [head.join(",")];
     store.sessions.forEach(function (s) {
@@ -615,7 +664,9 @@
           a.beforeBoard ? (a.beforeBoard !== a.verdict ? "yes" : "no") : "",
           a.ms != null ? (a.ms / 1000).toFixed(1) : "",
           a.mentionedMechanism, a.note,
-          s.status === "complete" && r > -1 ? r + 1 : "", s.rankWhy, s.rankFactors, s.boardNote
+          s.status === "complete" && r > -1 ? r + 1 : "", s.rankWhy, s.rankFactors,
+          ((s.place || {})[c.id] || {}).putAt, ((s.place || {})[c.id] || {}).useAt, ((s.place || {})[c.id] || {}).note,
+          s.boardNote
         ].map(csvCell).join(","));
       });
     });
@@ -747,6 +798,13 @@
     backToA: function () { go("partA", C.length - 1); },
     toIntroB: function () { go("introB"); },
     beginB: function () { picked = null; go("line"); },
+    toIntroC: function () {
+      if (cur.slots && cur.slots.some(function (x) { return x == null; })) return;
+      picked = null; go("introC");
+    },
+    beginC: function () { go("partC", 0); },
+    prevC: function () { cur.idx === 0 ? go("introC") : go("partC", cur.idx - 1); },
+    nextC: function () { if (cur.idx < C.length - 1) go("partC", cur.idx + 1); },
     pickBottle: function (el) {
       var id = Number(el.getAttribute("data-id"));
       picked = picked === id ? null : id;
@@ -773,7 +831,6 @@
       syncRanking(); touch(); render(true);
     },
     finish: function () {
-      if (view === "line" && cur.slots && cur.slots.some(function (x) { return x == null; })) return;
       picked = null;
       cur.status = "complete";
       cur.completedAt = new Date().toISOString();

@@ -13,11 +13,14 @@ A small web app for running and recording **Activity 2: Dispensing Mechanism Exp
 | Step | Participant sees | Recorded |
 |---|---|---|
 | Participant | Name and participant ID | Name, ID |
-| Part A · Fit / No fit | One concept at a time (pics 1–2 only), shuffled, no names | Fit / No fit, first answer, time to decide, moderator notes |
-| Review piles | Both piles side by side; tap a bottle to switch piles | Which concepts moved |
-| Part B · Ranking | 11 numbered spots on a line, Most Favorite (1) to Least Favorite (11), with the bottles in a tray above. Tap a bottle, then tap a spot. Tap two placed bottles to swap them, or tap a placed bottle and then the tray to take it off the line. Everything is tapped, nothing is dragged | Rank 1–11 for each concept, their reasons, moderator-coded factors |
+| Activity 1 · Fit / No fit | One concept at a time (pics 1–2 only), shuffled, no names | Fit / No fit, first answer, time to decide, moderator notes |
+| Activity 1 · Debrief | Both piles side by side; click a sketch (or its Move button) to switch sides | Which concepts moved, and the final pile |
+| Activity 2 · Ranking | 11 numbered spots, Most Favorite (1) to Least Favorite (11), bottles in a tray above. Tap a bottle, then a spot; tap two placed bottles to swap. Hover a sketch to see the full picture | Rank 1–11 per concept, their reasons, moderator-coded factors |
+| Activity 3 · Where it goes | One concept at a time | Where in their home they'd put it, where they'd use it, moderator notes |
 
-Keyboard: in Part A press `F` for Fit, `N` for No fit, and `←` / `→` to move between concepts.
+The home page has demo buttons for each activity (sample answers filled in, nothing saved).
+
+Keyboard: in Activity 1 press `F` for Fit, `N` for No fit, and `←` / `→` to move between concepts.
 
 ## Data
 
