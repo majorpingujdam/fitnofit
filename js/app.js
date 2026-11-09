@@ -433,7 +433,7 @@
       '<div class="tray' + (tray.length ? "" : " empty") + (pickedInSlot ? " can-drop" : "") + '"' + (pickedInSlot ? ' data-action="toTray" title="Put it back"' : "") + ">" +
         (tray.length
           ? tray.map(function (id) {
-              return '<button type="button" class="tray-bottle' + (picked === id ? " picked" : "") + '" data-action="pickBottle" data-id="' + id + '" data-peek="' + byId[id].hero + '" aria-pressed="' + (picked === id) + '" aria-label="' + esc(conceptLabel(byId[id])) + '">' +
+              return '<button type="button" class="tray-bottle' + (picked === id ? " picked" : "") + '" data-action="pickBottle" data-id="' + id + '" data-peek="' + byId[id].full + '" aria-pressed="' + (picked === id) + '" aria-label="' + esc(conceptLabel(byId[id])) + '">' +
                 '<img src="' + byId[id].shelf + '" alt=""><span class="n">' + id + "</span></button>";
             }).join("")
           : '<p class="tray-empty">' + (pickedInSlot ? "Tap here to take it off the line" : "To take a bottle off the line, tap it, then tap here.") + "</p>") +
@@ -442,7 +442,7 @@
       '<div class="slots' + (picked != null ? " armed" : "") + '">' +
         cur.slots.map(function (id, i) {
           var label = "Spot " + (i + 1) + (id != null ? ", " + conceptLabel(byId[id]) : ", empty");
-          return '<button type="button" class="slot' + (id != null ? " filled" : "") + (id != null && picked === id ? " picked" : "") + '" data-action="slot" data-i="' + i + '"' + (id != null ? ' data-peek="' + byId[id].hero + '"' : "") + ' aria-label="' + esc(label) + '">' +
+          return '<button type="button" class="slot' + (id != null ? " filled" : "") + (id != null && picked === id ? " picked" : "") + '" data-action="slot" data-i="' + i + '"' + (id != null ? ' data-peek="' + byId[id].full + '"' : "") + ' aria-label="' + esc(label) + '">' +
             (id != null ? '<img src="' + byId[id].shelf + '" alt=""><span class="cid">' + id + "</span>" : "") +
             '<span class="pos">' + (i + 1) + "</span></button>";
         }).join("") +
@@ -924,6 +924,33 @@
     else if (e.key === "ArrowRight") ACTIONS.nextA();
     else if (e.key === "ArrowLeft") ACTIONS.prevA();
   });
+
+  /* ------------------------------------------------------------------ full screen */
+
+  (function fullscreenButton() {
+    var root = document.documentElement;
+    var request = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (!request) return;   // e.g. iPhone Safari: no full screen API
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "fs-btn";
+    function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+    function label() {
+      var on = isFull();
+      btn.textContent = on ? "Exit full screen" : "Full screen";
+      btn.setAttribute("aria-pressed", String(on));
+    }
+    btn.addEventListener("click", function () {
+      try {
+        if (isFull()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        else request.call(root);
+      } catch (e) { /* browser refused */ }
+    });
+    document.addEventListener("fullscreenchange", label);
+    document.addEventListener("webkitfullscreenchange", label);
+    label();
+    document.body.appendChild(btn);
+  })();
 
   /* ------------------------------------------------------------------ boot */
 

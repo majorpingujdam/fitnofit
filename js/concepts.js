@@ -21,6 +21,7 @@ window.CONCEPTS = [
   c.hero = "images/c" + n + "-hero.jpg";
   c.steps = "images/c" + n + "-steps.jpg";
   c.shelf = "images/c" + n + "-shelf.jpg";
+  c.full = "images/c" + n + "-full.jpg";   // whole board: both bottles + how it works (ranking hover preview)
   return c;
 });
 

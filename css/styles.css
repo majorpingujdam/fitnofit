@@ -289,7 +289,7 @@ th .sort.on { color: var(--ink); }
   opacity: 0; transform: translateY(4px); transition: opacity .12s, transform .12s;
 }
 .peek.on { opacity: 1; transform: none; }
-.peek img { display: block; width: auto; height: auto; max-width: min(420px, 80vw); max-height: 300px; }
+.peek img { display: block; width: auto; height: auto; max-width: min(720px, 90vw); max-height: min(560px, 72vh); }
 @media (prefers-reduced-motion: reduce) { .peek { transition: none; } }
 
 /* Home: demo shortcuts + collapsible unfinished sessions */
@@ -301,3 +301,12 @@ th .sort.on { color: var(--ink); }
 .resume-toggle::after { content: " +"; color: var(--grey); font-weight: 400; }
 .resume-toggle[aria-expanded="true"]::after { content: " –"; }
 .resume-rows { margin-top: 8px; max-height: 60vh; overflow-y: auto; }
+
+/* Full screen toggle, bottom right on every screen */
+.fs-btn {
+  position: fixed; right: 20px; bottom: 20px; z-index: 40;
+  height: 40px; padding: 0 16px; border: 1px solid var(--rule); border-radius: 999px;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(6px); font-size: .85rem; cursor: pointer;
+}
+.fs-btn:hover { border-color: var(--ink); }
+@media print { .fs-btn { display: none; } }
