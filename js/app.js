@@ -249,15 +249,17 @@
     var done = store.sessions.length - open.length;
     return (
       '<section class="home">' +
+        '<div class="home-top">' +
         "<div>" +
           "<h1>Would you leave it out on display?</h1>" +
           '<p class="lede">Activity 2 for Team Nudge. Participants judge ' + C.length + " spray concepts on looks alone, then learn how each one works and rank them.</p>" +
           '<div class="actions"><button class="btn primary" data-action="new">Start a session</button>' +
           '<button class="btn" data-action="results">See results</button></div>' +
-          (open.length ? '<div class="resume-list"><h3>Unfinished sessions</h3>' + open.slice().reverse().map(function (s) {
+        "</div>" +
+          (open.length ? '<aside class="resume-list"><h3>Unfinished sessions</h3>' + open.slice().reverse().map(function (s) {
             return '<div class="resume-row"><span>' + esc(s.participant.name || "No name yet") + ' <span class="grey small">' + esc(s.participant.pid) +
               ", " + esc(stepLabelFor(s)) + '</span></span><button class="btn" data-action="resume" data-id="' + esc(s.id) + '">Resume</button></div>';
-          }).join("") + "</div>" : "") +
+          }).join("") + "</aside>" : "") +
         "</div>" +
         "<div></div>" +
         "<div>" +
