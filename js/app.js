@@ -283,19 +283,9 @@
     return (
       '<div class="narrow">' +
         "<h1>Who's taking part?</h1>" +
-        '<p class="grey-lede">Only the name is needed. The rest helps when reading results later.</p>' +
         '<div class="two" style="margin-top:40px">' +
-          '<label class="field"><span>Name</span><input type="text" data-bind="participant.name" value="' + esc(p.name) + '" autocomplete="off"></label>' +
+          '<label class="field"><span>Name</span><input type="text" data-bind="participant.name" value="' + esc(p.name) + '" autocomplete="off" autofocus></label>' +
           '<label class="field"><span>Participant ID</span><input type="text" data-bind="participant.pid" value="' + esc(p.pid) + '"></label>' +
-          '<label class="field"><span>Moderator</span><input type="text" data-bind="participant.moderator" value="' + esc(p.moderator) + '"></label>' +
-          '<label class="field"><span>Note-taker</span><input type="text" data-bind="participant.notetaker" value="' + esc(p.notetaker) + '"></label>' +
-        "</div>" +
-        '<div style="margin-top:48px">' +
-          '<div class="block"><div class="q">Home</div>' + chips("participant.homeType", O.homeType, { single: true }) + "</div>" +
-          '<div class="block"><div class="q">Lives with</div>' + chips("participant.household", O.household) + "</div>" +
-          '<div class="block"><div class="q">Scent products they use now</div>' + chips("participant.products", O.products) + "</div>" +
-          '<div class="block"><div class="q">Where their air freshener lives today</div>' + chips("participant.storage", O.storage, { single: true }) + "</div>" +
-          '<div class="block"><label class="field"><span>Notes</span>' + textarea("participant.notes", "") + "</label></div>" +
         "</div>" +
         '<div class="nav-row"><span class="grey small">' + (store.settings.randomize ? "Concepts will appear in a shuffled order." : "Concepts will appear in order, 1 to " + C.length + ".") + "</span>" +
         '<button class="btn primary" data-action="startA" id="startA" ' + (p.name.trim() ? "" : "disabled") + ">Start Part A</button></div>" +
@@ -318,7 +308,6 @@
     var i = cur.idx, id = cur.order[i], c = byId[id];
     var base = "partA." + id;
     var a = cur.partA[id] || {};
-    var reasons = a.verdict === "fit" ? O.fitReasons : a.verdict === "nofit" ? O.noFitReasons : null;
     return (
       '<div class="eval">' +
         '<div class="stimulus"><img src="' + c.hero + '" alt="' + esc(conceptLabel(c)) + '"><p class="caption">' + esc(conceptLabel(c)) + "</p></div>" +
@@ -329,13 +318,6 @@
             '<button type="button" class="' + (a.verdict === "nofit" ? "on" : "") + '" data-action="verdict" data-val="nofit" aria-pressed="' + (a.verdict === "nofit") + '">No fit</button>' +
           "</div>" +
           (a.verdict ? "" : '<p class="hint">Keyboard: <kbd>F</kbd> fit, <kbd>N</kbd> no fit</p>') +
-          (reasons
-            ? '<div class="reveal" style="margin-top:36px">' +
-                '<div class="block"><div class="q">What made you decide?</div>' + chips(base + ".reasons", reasons) + "</div>" +
-                '<div class="block"><div class="q">Where in your home would you put it?</div>' + chips(base + ".placeAt", O.rooms) + "</div>" +
-                '<div class="block"><div class="q">Where would you use it?</div>' + chips(base + ".useAt", O.rooms) + "</div>" +
-              "</div>"
-            : "") +
           '<details class="mod"' + (a.note || a.mentionedMechanism ? " open" : "") + "><summary>Moderator notes</summary><div>" +
             '<div class="block"><div class="q">Did they mention the nozzle or trigger without being asked?</div>' + chips(base + ".mentionedMechanism", ["Yes", "Only when asked", "No"], { single: true }) + "</div>" +
             '<div class="block">' + textarea(base + ".note", "Quotes and observations") + "</div>" +
@@ -558,24 +540,22 @@
       '<div class="section"><h3>By concept</h3><div class="table-wrap"><table><thead><tr>' +
         th("id", "Concept", false) + th("fitRate", "Fit rate", false) + th("avgRank", "Avg rank", true) + th("firsts", "Ranked first", true) +
         th("match", "As expected", true) + th("intuitive", "Intuitive", true) + th("convenient", "Convenient", true) + th("stuck", "Got stuck", true) +
-        "<th>Why</th><th>Where it would go</th></tr></thead><tbody>" +
+        "</tr></thead><tbody>" +
         sorted.map(function (r) {
           return "<tr>" +
             '<td><div class="c-cell"><img src="' + r.c.shelf + '" alt=""><span>' + r.c.id + ". " + esc(r.c.name) + "<small>" + esc(r.c.concealment) + "</small></span></div></td>" +
             "<td>" + bar(r.fitRate) + '<span class="grey small">' + (r.n ? r.fit + " of " + r.n + (r.moved ? ", " + r.moved + " moved" : "") : "") + "</span></td>" +
             '<td class="num">' + fmt(r.avgRank) + '</td><td class="num">' + r.firsts + '</td><td class="num">' + pct(r.match) +
             '</td><td class="num">' + fmt(r.intuitive) + '</td><td class="num">' + fmt(r.convenient) + '</td><td class="num">' + pct(r.stuck) + "</td>" +
-            '<td class="reasons">' + r.reasons.map(function (x) { return esc(x[0]) + " (" + x[1] + ")"; }).join(", ") + "</td>" +
-            '<td class="reasons">' + r.places.map(function (x) { return esc(x[0]) + " (" + x[1] + ")"; }).join(", ") + "</td>" +
           "</tr>";
         }).join("") + "</tbody></table></div>" +
         '<p class="grey small" style="margin-top:12px">Avg rank counts finished sessions only. 1 is most preferred.</p></div>' +
 
       '<div class="section"><h3>Participants</h3>' +
-        (S.length ? '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Date</th><th>Moderator</th><th>Status</th><th class="num">Fit</th><th>Top pick</th><th></th></tr></thead><tbody>' +
+        (S.length ? '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Date</th><th>Status</th><th class="num">Fit</th><th>Top pick</th><th></th></tr></thead><tbody>' +
           S.slice().reverse().map(function (s) {
             var fits = Object.keys(s.partA).filter(function (k) { return s.partA[k].verdict === "fit"; }).length;
-            return "<tr><td>" + esc(s.participant.pid) + "</td><td>" + esc(s.participant.name) + "</td><td>" + dateStr(s.createdAt) + "</td><td>" + esc(s.participant.moderator) +
+            return "<tr><td>" + esc(s.participant.pid) + "</td><td>" + esc(s.participant.name) + "</td><td>" + dateStr(s.createdAt) +
               '</td><td><span class="status ' + (s.status === "complete" ? "complete" : "") + '">' + (s.status === "complete" ? "Finished" : esc(stepLabelFor(s))) + "</span></td>" +
               '<td class="num">' + fits + "</td><td>" + (s.status === "complete" && s.ranking.length ? "Concept " + s.ranking[0] : "") + "</td>" +
               '<td class="num"><div style="display:flex;gap:6px;justify-content:flex-end">' +
@@ -618,11 +598,10 @@
 
   function toCSV() {
     var head = [
-      "session_id", "participant_id", "name", "moderator", "notetaker", "date", "status",
-      "home_type", "household", "current_products", "current_storage", "session_notes",
+      "session_id", "participant_id", "name", "date", "status",
       "concept_id", "concept_name", "concealment", "family", "order_position",
       "A_verdict", "A_first_verdict", "A_verdict_before_board", "A_moved_on_board", "A_decision_seconds",
-      "A_reasons", "A_would_put_it", "A_would_use_it", "A_mentioned_mechanism", "A_note",
+      "A_mentioned_mechanism", "A_note",
       "B_predicted_gestures", "B_fluency", "B_demo_note", "B_matched_expectation",
       "B_intuitive_1to5", "B_convenient_1to5", "B_display_shift", "B_note",
       "rank", "rank_reasons", "rank_factors_coded", "top_pick_display_impact", "board_note"
@@ -634,15 +613,14 @@
         var a = s.partA[c.id] || {}, b = s.partB[c.id] || {};
         var r = s.ranking.indexOf(c.id);
         lines.push([
-          s.id, p.pid, p.name, p.moderator, p.notetaker, s.createdAt, s.status,
-          p.homeType, p.household, p.products, p.storage, p.notes,
+          s.id, p.pid, p.name, s.createdAt, s.status,
           c.id, c.name, c.concealment, c.family, s.order.indexOf(c.id) + 1,
           a.verdict === "fit" ? "Fit" : a.verdict === "nofit" ? "No Fit" : "",
           a.first === "fit" ? "Fit" : a.first === "nofit" ? "No Fit" : "",
           a.beforeBoard === "fit" ? "Fit" : a.beforeBoard === "nofit" ? "No Fit" : "",
           a.beforeBoard ? (a.beforeBoard !== a.verdict ? "yes" : "no") : "",
           a.ms != null ? (a.ms / 1000).toFixed(1) : "",
-          a.reasons, a.placeAt, a.useAt, a.mentionedMechanism, a.note,
+          a.mentionedMechanism, a.note,
           b.predicted, b.fluency, b.demoNote, b.match, b.intuitive, b.convenient, b.displayShift, b.note,
           s.status === "complete" && r > -1 ? r + 1 : "", s.rankWhy, s.rankFactors, s.displayImpact, s.boardNote
         ].map(csvCell).join(","));
