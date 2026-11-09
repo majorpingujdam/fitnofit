@@ -15,9 +15,9 @@ A small web app for running and recording **Activity 2: Dispensing Mechanism Exp
 | Participant | Name and participant ID | Name, ID |
 | Part A · Fit / No fit | One concept at a time (pics 1–2 only), shuffled, no names | Fit / No fit, first answer, time to decide, moderator notes |
 | Review piles | Both piles side by side; tap a bottle to switch piles | Which concepts moved |
-| Part B · One line | All 11 bottles on a line from "Put it away" to "Leave it on display". They start where Part A put them (No fit left, Fit right) and can be dragged anywhere. Bottles push each other aside, so none overlap | Position of each bottle (0–100), the resulting rank (1 = furthest right), their reasons, moderator-coded factors |
+| Part B · Ranking | 11 numbered spots on a line, Most Favorite (1) to Least Favorite (11), with the bottles in a tray above. Tap a bottle, then tap a spot. Tap two placed bottles to swap them, or tap a placed bottle and then the tray to take it off the line. Everything is tapped, nothing is dragged | Rank 1–11 for each concept, their reasons, moderator-coded factors |
 
-Keyboard: in Part A press `F` for Fit, `N` for No fit, and `←` / `→` to move between concepts. In Part B, focus a bottle and use `←` / `→` to move it (hold Shift for bigger steps).
+Keyboard: in Part A press `F` for Fit, `N` for No fit, and `←` / `→` to move between concepts.
 
 ## Data
 

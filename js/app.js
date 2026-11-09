@@ -31,7 +31,7 @@
     { key: "intake", label: "Participant" },
     { key: "introA", label: "Part A · Fit / No Fit", also: ["partA"] },
     { key: "board", label: "Review sort" },
-    { key: "introB", label: "Part B · Line", also: ["line"] },
+    { key: "introB", label: "Part B · Ranking", also: ["line"] },
     { key: "done", label: "Done" }
   ];
 
@@ -162,7 +162,7 @@
     var i = cur ? (cur.idx || 0) + 1 : 0;
     return {
       intake: "Participant", introA: "Part A", partA: "Part A, concept " + i + " of " + C.length,
-      board: "Part A, review", introB: "Part B", line: "Part B, placing on the line", done: "Done"
+      board: "Part A, review", introB: "Part B", line: "Part B, ranking", done: "Done"
     }[view] || "";
   }
 
@@ -205,7 +205,6 @@
     var fn = VIEWS[view] || VIEWS.home;
     app.innerHTML = fn();
     if (keepScroll) window.scrollTo(0, y);
-    if (view === "line") bindLine();
   }
 
   function newSession() {
@@ -223,7 +222,7 @@
       },
       order: order,
       partA: {}, boardChanges: [],
-      ranking: [], linePos: {}, rankWhy: "", rankFactors: []
+      ranking: [], slots: null, rankWhy: "", rankFactors: []
     };
     store.sessions.push(s);
     save();
@@ -252,7 +251,7 @@
         '<div class="home-top">' +
         "<div>" +
           "<h1>Would you leave it out on display?</h1>" +
-          '<p class="lede">Activity 2 for Team Nudge. Participants judge ' + C.length + " spray concepts on looks alone, then place all of them on one line from “put it away” to “leave it on display”.</p>" +
+          '<p class="lede">Activity 2 for Team Nudge. Participants judge ' + C.length + " spray concepts on looks alone, then rank all of them from most to least favorite.</p>" +
           '<div class="actions"><button class="btn primary" data-action="new">Start a session</button>' +
           '<button class="btn" data-action="results">See results</button></div>' +
         "</div>" +
@@ -275,7 +274,7 @@
   function stepLabelFor(s) {
     var i = (s.idx || 0) + 1;
     return { intake: "at sign-in", introA: "starting Part A", partA: "Part A, " + i + " of " + C.length, board: "reviewing piles",
-      introB: "starting Part B", partB: "starting Part B", rank: "starting Part B", line: "placing on the line" }[s.step] || "in progress";
+      introB: "starting Part B", partB: "starting Part B", rank: "starting Part B", line: "ranking" }[s.step] || "in progress";
   }
 
   VIEWS.intake = function () {
@@ -359,61 +358,64 @@
   VIEWS.introB = function () {
     return (
       '<div class="narrow">' +
-        "<h1>Now put them all on one line.</h1>" +
-        '<p class="grey-lede">Drag each bottle along the line. The further right, the more comfortable you\'d be leaving it on display in your home. The further left, the more you\'d want to put it away.</p>' +
-        '<p class="grey small" style="margin:24px 0 40px">They start where you sorted them: No fit on the left, Fit on the right.</p>' +
-        '<button class="btn primary" data-action="beginB">Begin Part B</button>' +
+        "<h1>Now rank all eleven.</h1>" +
+        '<p class="grey-lede">Tap a bottle, then tap a spot on the line. Your most favorite goes on the left, your least favorite on the right. Tap two placed bottles to swap them.</p>' +
+        '<button class="btn primary" data-action="beginB" style="margin-top:40px">Begin Part B</button>' +
       "</div>"
     );
   };
 
-  // Default positions: No fit pile spread over the left half, Fit pile over the right half.
-  function seedLine() {
-    if (!cur.linePos) cur.linePos = {};
-    var missing = C.some(function (c) { return typeof cur.linePos[c.id] !== "number"; });
-    if (!missing) return;
-    var nos = cur.order.filter(function (id) { return (cur.partA[id] || {}).verdict !== "fit"; });
-    var fits = cur.order.filter(function (id) { return (cur.partA[id] || {}).verdict === "fit"; });
-    function spread(ids, lo, hi) {
-      ids.forEach(function (id, i) {
-        cur.linePos[id] = ids.length === 1 ? (lo + hi) / 2 : lo + (hi - lo) * i / (ids.length - 1);
-      });
+  var picked = null; // id of the bottle currently selected in Part B (not saved)
+
+  function ensureSlots() {
+    if (!Array.isArray(cur.slots) || cur.slots.length !== C.length) {
+      cur.slots = C.map(function () { return null; });
+      touch();
     }
-    spread(nos, 0.04, 0.44);
-    spread(fits, 0.56, 0.96);
-    syncRanking();
-    touch();
   }
 
-  // Rank 1 = furthest right (most comfortable on display)
   function syncRanking() {
-    cur.ranking = C.map(function (c) { return c.id; }).sort(function (a, b) { return cur.linePos[b] - cur.linePos[a]; });
+    cur.ranking = cur.slots.filter(function (id) { return id != null; });
   }
 
   VIEWS.line = function () {
-    seedLine();
+    ensureSlots();
+    var tray = cur.order.filter(function (id) { return cur.slots.indexOf(id) < 0; });
+    var placed = C.length - tray.length;
+    var pickedInSlot = picked != null && cur.slots.indexOf(picked) > -1;
     return (
-      '<div class="line-head"><h1>Where does each one belong?</h1>' +
-        '<p class="grey" style="margin-top:12px">Drag the bottles left or right. Put them anywhere along the line.</p></div>' +
-      '<div class="line-stage" id="lineStage">' +
-        '<div class="line-track" id="lineTrack">' +
-          C.map(function (c) {
-            var x = cur.linePos[c.id];
-            return '<button type="button" class="line-bottle" data-id="' + c.id + '" style="left:' + (x * 100).toFixed(2) + '%" ' +
-              'aria-label="' + esc(conceptLabel(c)) + '. Use left and right arrow keys to move." aria-valuenow="' + Math.round(x * 100) + '" role="slider" aria-valuemin="0" aria-valuemax="100">' +
-              '<img src="' + c.shelf + '" alt="" draggable="false"><span class="n">' + c.id + "</span></button>";
-          }).join("") +
-        "</div>" +
-        '<div class="line-rule"></div>' +
-        '<div class="line-ends"><span>Put it away</span><span>Leave it on display</span></div>' +
+      '<div class="line-head"><h1>Rank them from favorite to least favorite.</h1>' +
+        '<p class="grey" style="margin-top:12px">' +
+          (picked != null ? "Now tap a spot on the line." : tray.length ? "Tap a bottle, then tap a spot on the line." : "All placed. Tap two bottles to swap them.") +
+        "</p></div>" +
+
+      '<div class="tray' + (tray.length ? "" : " empty") + (pickedInSlot ? " can-drop" : "") + '"' + (pickedInSlot ? ' data-action="toTray" title="Put it back"' : "") + ">" +
+        (tray.length
+          ? tray.map(function (id) {
+              return '<button type="button" class="tray-bottle' + (picked === id ? " picked" : "") + '" data-action="pickBottle" data-id="' + id + '" aria-pressed="' + (picked === id) + '" aria-label="' + esc(conceptLabel(byId[id])) + '">' +
+                '<img src="' + byId[id].shelf + '" alt=""><span class="n">' + id + "</span></button>";
+            }).join("")
+          : '<p class="tray-empty">' + (pickedInSlot ? "Tap here to take it off the line" : "To take a bottle off the line, tap it, then tap here.") + "</p>") +
       "</div>" +
+
+      '<div class="slots' + (picked != null ? " armed" : "") + '">' +
+        cur.slots.map(function (id, i) {
+          var label = "Spot " + (i + 1) + (id != null ? ", " + conceptLabel(byId[id]) : ", empty");
+          return '<button type="button" class="slot' + (id != null ? " filled" : "") + (id != null && picked === id ? " picked" : "") + '" data-action="slot" data-i="' + i + '" aria-label="' + esc(label) + '">' +
+            (id != null ? '<img src="' + byId[id].shelf + '" alt=""><span class="cid">' + id + "</span>" : "") +
+            '<span class="pos">' + (i + 1) + "</span></button>";
+        }).join("") +
+      "</div>" +
+      '<div class="line-ends"><span>Most Favorite</span><span>Least Favorite</span></div>' +
+
       '<div class="line-foot">' +
-        '<div class="block"><label class="field"><span>What made you place them this way?</span>' + textarea("rankWhy", "Their words. Don't suggest criteria.") + "</label></div>" +
+        '<div class="block"><label class="field"><span>What made you rank them this way?</span>' + textarea("rankWhy", "Their words. Don't suggest criteria.") + "</label></div>" +
         '<details class="mod"' + ((cur.rankFactors || []).length ? " open" : "") + "><summary>Moderator: factors they mentioned</summary><div>" +
           chips("rankFactors", O.rankFactors) +
         "</div></details>" +
         '<div class="nav-row"><button class="link" data-action="toIntroB">Back</button>' +
-        '<button class="btn primary" data-action="finish">Finish session</button></div>' +
+        '<span style="display:flex;align-items:center;gap:16px">' + (placed < C.length ? '<span class="grey small">' + placed + " of " + C.length + " placed</span>" : "") +
+        '<button class="btn primary" data-action="finish" ' + (placed < C.length ? "disabled" : "") + ">Finish session</button></span></div>" +
       "</div>"
     );
   };
@@ -441,12 +443,11 @@
     return C.map(function (c) {
       var A = S.map(function (s) { return s.partA[c.id]; }).filter(function (a) { return a && a.verdict; });
       var ranks = done.map(function (s) { return s.ranking.indexOf(c.id) + 1; }).filter(function (r) { return r > 0; });
-      var pos = done.map(function (s) { return s.linePos ? s.linePos[c.id] : null; }).filter(function (x) { return typeof x === "number"; });
       var fit = A.filter(function (a) { return a.verdict === "fit"; }).length;
       return {
         c: c, n: A.length, fit: fit, fitRate: A.length ? fit / A.length : null,
         avgRank: avg(ranks), firsts: ranks.filter(function (r) { return r === 1; }).length,
-        pos: avg(pos),
+        top3: ranks.filter(function (r) { return r <= 3; }).length,
         moved: A.filter(function (a) { return a.beforeBoard && a.beforeBoard !== a.verdict; }).length
       };
     });
@@ -462,7 +463,7 @@
       var n = rs.reduce(function (a, r) { return a + r.n; }, 0);
       var f = rs.reduce(function (a, r) { return a + r.fit; }, 0);
       return { lv: lv, k: rs.length, rate: n ? f / n : null, rank: avg(rs.map(function (r) { return r.avgRank; })),
-        pos: avg(rs.map(function (r) { return r.pos; })) };
+        top3: rs.reduce(function (a, r) { return a + r.top3; }, 0) };
     });
     var ranked = rows.filter(function (r) { return r.avgRank != null; }).sort(function (a, b) { return a.avgRank - b.avgRank; });
 
@@ -498,22 +499,22 @@
           '<label class="btn" style="display:inline-flex;align-items:center">Import JSON<input type="file" accept="application/json,.json" id="importFile" hidden></label>' +
         "</div></div>" +
 
-      '<div class="section"><h3>By concealment</h3><div class="table-wrap"><table><thead><tr><th>Mechanism</th><th class="num">Concepts</th><th>Fit rate</th><th>Avg spot on the line</th><th class="num">Avg rank</th></tr></thead><tbody>' +
+      '<div class="section"><h3>By concealment</h3><div class="table-wrap"><table><thead><tr><th>Mechanism</th><th class="num">Concepts</th><th>Fit rate</th><th class="num">Avg rank</th><th class="num">Times in a top 3</th></tr></thead><tbody>' +
         groups.map(function (g) {
-          return "<tr><td>" + g.lv + '</td><td class="num">' + g.k + "</td><td>" + bar(g.rate) + "</td><td>" + bar(g.pos, true) + '</td><td class="num">' + fmt(g.rank) + "</td></tr>";
+          return "<tr><td>" + g.lv + '</td><td class="num">' + g.k + "</td><td>" + bar(g.rate) + '</td><td class="num">' + fmt(g.rank) + '</td><td class="num">' + g.top3 + "</td></tr>";
         }).join("") + "</tbody></table></div></div>" +
 
       '<div class="section"><h3>By concept</h3><div class="table-wrap"><table><thead><tr>' +
-        th("id", "Concept", false) + th("fitRate", "Fit rate", false) + th("pos", "Avg spot on the line", false) + th("avgRank", "Avg rank", true) + th("firsts", "Ranked first", true) +
+        th("id", "Concept", false) + th("fitRate", "Fit rate", false) + th("avgRank", "Avg rank", true) + th("firsts", "Ranked first", true) + th("top3", "In top 3", true) +
         "</tr></thead><tbody>" +
         sorted.map(function (r) {
           return "<tr>" +
             '<td><div class="c-cell"><img src="' + r.c.shelf + '" alt=""><span>' + r.c.id + ". " + esc(r.c.name) + "<small>" + esc(r.c.concealment) + "</small></span></div></td>" +
             "<td>" + bar(r.fitRate) + '<span class="grey small">' + (r.n ? r.fit + " of " + r.n + (r.moved ? ", " + r.moved + " moved" : "") : "") + "</span></td>" +
-            "<td>" + bar(r.pos, true) + '</td><td class="num">' + fmt(r.avgRank) + '</td><td class="num">' + r.firsts + "</td>" +
+            '<td class="num">' + fmt(r.avgRank) + '</td><td class="num">' + r.firsts + '</td><td class="num">' + r.top3 + "</td>" +
           "</tr>";
         }).join("") + "</tbody></table></div>" +
-        '<p class="grey small" style="margin-top:12px">Line spot runs from 0 (put it away) to 100 (leave it on display). Rank 1 is the bottle placed furthest right. Both count finished sessions only.</p></div>' +
+        '<p class="grey small" style="margin-top:12px">Rank 1 is the most favorite. Rankings count finished sessions only.</p></div>' +
 
       '<div class="section"><h3>Participants</h3>' +
         (S.length ? '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Date</th><th>Status</th><th class="num">Fit</th><th>Top pick</th><th></th></tr></thead><tbody>' +
@@ -566,7 +567,7 @@
       "concept_id", "concept_name", "concealment", "family", "order_position",
       "A_verdict", "A_first_verdict", "A_verdict_before_board", "A_moved_on_board", "A_decision_seconds",
       "A_mentioned_mechanism", "A_note",
-      "B_line_position_0to100", "B_rank", "B_reasons", "B_factors_coded", "board_note"
+      "B_rank", "B_reasons", "B_factors_coded", "board_note"
     ];
     var lines = [head.join(",")];
     store.sessions.forEach(function (s) {
@@ -583,7 +584,6 @@
           a.beforeBoard ? (a.beforeBoard !== a.verdict ? "yes" : "no") : "",
           a.ms != null ? (a.ms / 1000).toFixed(1) : "",
           a.mentionedMechanism, a.note,
-          s.linePos && typeof s.linePos[c.id] === "number" ? Math.round(s.linePos[c.id] * 100) : "",
           s.status === "complete" && r > -1 ? r + 1 : "", s.rankWhy, s.rankFactors, s.boardNote
         ].map(csvCell).join(","));
       });
@@ -622,105 +622,6 @@
     bannerEl.hidden = false;
     bannerEl.textContent = msg;
     setTimeout(updateBanner, 4000);
-  }
-
-  /* ------------------------------------------------------------------ line drag */
-
-  // Bottles live on a line from 0 (put it away) to 1 (leave it on display).
-  // They never overlap: moving one pushes its neighbours along.
-  var GAP = 8; // px between bottles
-
-  function bindLine() {
-    var track = document.getElementById("lineTrack");
-    if (!track) return;
-    var els = Array.prototype.slice.call(track.querySelectorAll(".line-bottle"));
-    var drag = null, z = 10;
-
-    function items() {
-      var W = track.clientWidth;
-      return els.map(function (el) {
-        var id = Number(el.getAttribute("data-id")), w = el.offsetWidth || 50;
-        var p = cur.linePos[id];
-        return { el: el, id: id, w: w, x: w / 2 + p * Math.max(1, W - w) };
-      });
-    }
-
-    // Push items apart (pixel space). `fixed` keeps the dragged bottle under the pointer where possible.
-    function resolve(list, fixed) {
-      var W = track.clientWidth;
-      list.sort(function (a, b) { return a.x - b.x || (a === fixed ? -1 : b === fixed ? 1 : 0); });
-      var k = fixed ? list.indexOf(fixed) : 0, i;
-      for (i = k + 1; i < list.length; i++) list[i].x = Math.max(list[i].x, list[i - 1].x + (list[i - 1].w + list[i].w) / 2 + GAP);
-      for (i = k - 1; i >= 0; i--) list[i].x = Math.min(list[i].x, list[i + 1].x - (list[i + 1].w + list[i].w) / 2 - GAP);
-      // keep everything on the line
-      for (i = list.length - 1; i >= 0; i--) {
-        var max = i === list.length - 1 ? W - list[i].w / 2 : list[i + 1].x - (list[i + 1].w + list[i].w) / 2 - GAP;
-        list[i].x = Math.min(list[i].x, max);
-      }
-      for (i = 0; i < list.length; i++) {
-        var min = i === 0 ? list[i].w / 2 : list[i - 1].x + (list[i - 1].w + list[i].w) / 2 + GAP;
-        list[i].x = Math.max(list[i].x, min);
-      }
-      list.forEach(function (it) {
-        it.el.style.left = it.x + "px";
-        var p = Math.max(0, Math.min(1, (it.x - it.w / 2) / Math.max(1, W - it.w)));
-        cur.linePos[it.id] = Math.round(p * 1000) / 1000;
-        it.el.setAttribute("aria-valuenow", Math.round(p * 100));
-      });
-    }
-
-    function layout() { resolve(items(), null); }
-
-    // Lay out once images have their real widths, and again on resize.
-    var pending = els.filter(function (el) { var img = el.querySelector("img"); return !img.complete; });
-    pending.forEach(function (el) { el.querySelector("img").addEventListener("load", layout, { once: true }); });
-    layout();
-    window.addEventListener("resize", function onResize() {
-      if (!document.getElementById("lineTrack")) return window.removeEventListener("resize", onResize);
-      layout();
-    });
-
-    track.addEventListener("pointerdown", function (e) {
-      var el = e.target.closest(".line-bottle");
-      if (!el) return;
-      e.preventDefault();
-      var r = track.getBoundingClientRect();
-      drag = { el: el, offset: e.clientX - r.left - parseFloat(el.style.left) };
-      el.classList.add("dragging");
-      el.style.zIndex = ++z;
-      el.focus({ preventScroll: true });
-      track.setPointerCapture(e.pointerId);
-    });
-    track.addEventListener("pointermove", function (e) {
-      if (!drag) return;
-      var r = track.getBoundingClientRect();
-      var list = items();
-      var me = list.filter(function (it) { return it.el === drag.el; })[0];
-      me.x = e.clientX - r.left - drag.offset;
-      resolve(list, me);
-    });
-    function end() {
-      if (!drag) return;
-      drag.el.classList.remove("dragging");
-      drag = null;
-      syncRanking();
-      touch();
-    }
-    track.addEventListener("pointerup", end);
-    track.addEventListener("pointercancel", end);
-
-    track.addEventListener("keydown", function (e) {
-      var el = e.target.closest(".line-bottle");
-      if (!el || (e.key !== "ArrowLeft" && e.key !== "ArrowRight")) return;
-      e.preventDefault();
-      var list = items();
-      var me = list.filter(function (it) { return it.el === el; })[0];
-      var step = (e.shiftKey ? 0.1 : 0.02) * track.clientWidth;
-      me.x += e.key === "ArrowRight" ? step : -step;
-      resolve(list, me);
-      syncRanking();
-      touch();
-    });
   }
 
   /* ------------------------------------------------------------------ events */
@@ -766,8 +667,35 @@
     },
     backToA: function () { go("partA", C.length - 1); },
     toIntroB: function () { go("introB"); },
-    beginB: function () { go("line"); },
+    beginB: function () { picked = null; go("line"); },
+    pickBottle: function (el) {
+      var id = Number(el.getAttribute("data-id"));
+      picked = picked === id ? null : id;
+      render(true);
+    },
+    slot: function (el) {
+      var i = Number(el.getAttribute("data-i")), occupant = cur.slots[i];
+      if (picked == null) {                    // nothing selected: select the bottle in this spot
+        if (occupant != null) { picked = occupant; render(true); }
+        return;
+      }
+      if (occupant === picked) { picked = null; render(true); return; }
+      var from = cur.slots.indexOf(picked);
+      cur.slots[i] = picked;
+      if (from > -1) cur.slots[from] = occupant;   // swap (or leave the old spot empty)
+      // a bottle bumped from the line by a tray bottle goes back to the tray
+      picked = null;
+      syncRanking(); touch(); render(true);
+    },
+    toTray: function () {
+      var from = cur.slots.indexOf(picked);
+      if (from > -1) cur.slots[from] = null;
+      picked = null;
+      syncRanking(); touch(); render(true);
+    },
     finish: function () {
+      if (view === "line" && cur.slots && cur.slots.some(function (x) { return x == null; })) return;
+      picked = null;
       cur.status = "complete";
       cur.completedAt = new Date().toISOString();
       go("done");
@@ -850,6 +778,7 @@
   });
 
   document.addEventListener("keydown", function (e) {
+    if (view === "line" && e.key === "Escape" && picked != null) { picked = null; render(true); return; }
     if (view !== "partA" || !cur) return;
     var t = e.target.tagName;
     if (t === "INPUT" || t === "TEXTAREA" || e.metaKey || e.ctrlKey || e.altKey) return;
