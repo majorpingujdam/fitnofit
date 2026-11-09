@@ -20,6 +20,7 @@ window.CONCEPTS = [
   var n = String(c.id).padStart(2, "0");
   c.hero = "images/c" + n + "-hero.jpg";
   c.steps = "images/c" + n + "-steps.jpg";
+  c.shelf = "images/c" + n + "-shelf.jpg";
   return c;
 });
 

@@ -152,19 +152,37 @@
     return -1;
   }
 
+  // Overall session progress: intake + 11 concepts in A + review + 11 in B + ranking
+  function progressFraction() {
+    var n = C.length, total = 2 * n + 3, i = cur ? cur.idx || 0 : 0;
+    var at = { intake: 0, introA: 1, partA: 1 + i, board: 1 + n, introB: 2 + n, partB: 2 + n + i, rank: 2 + 2 * n, done: total }[view];
+    return at == null ? 0 : at / total;
+  }
+
+  function stepLabel() {
+    var i = cur ? (cur.idx || 0) + 1 : 0;
+    return {
+      intake: "Participant", introA: "Part A", partA: "Part A, concept " + i + " of " + C.length,
+      board: "Part A, review", introB: "Part B", partB: "Part B, concept " + i + " of " + C.length,
+      rank: "Ranking", done: "Done"
+    }[view] || "";
+  }
+
   function renderChrome() {
+    var bar = document.getElementById("progressbar");
     if (cur && view !== "home" && view !== "results") {
-      var si = stepIndex(view);
-      progressEl.innerHTML = '<div class="steps-nav">' + FLOW.map(function (f, i) {
-        return '<span class="' + (i === si ? "on" : i < si ? "done" : "") + '">' + esc(f.label) + "</span>";
-      }).join("") + "</div>";
+      progressEl.textContent = (cur.participant.name ? cur.participant.name + ", " : "") + stepLabel().charAt(0).toLowerCase() + stepLabel().slice(1);
+      if (!cur.participant.name) progressEl.textContent = stepLabel();
       rightEl.innerHTML = '<span id="saved">' + (cur.updatedAt ? "Saved " + timeStr(cur.updatedAt) : "") +
-        '</span><button class="btn ghost" data-action="exit">Exit</button>';
+        '</span><button class="link" data-action="exit">Exit</button>';
+      bar.hidden = false;
+      bar.firstChild.style.width = Math.round(progressFraction() * 100) + "%";
     } else {
-      progressEl.innerHTML = "";
+      progressEl.textContent = "";
+      bar.hidden = true;
       rightEl.innerHTML = view === "results"
-        ? '<button class="btn" data-action="home">Home</button>'
-        : '<button class="btn" data-action="results">Results &amp; export</button>';
+        ? '<button class="link" data-action="home">Home</button>'
+        : '<button class="link" data-action="results">Results</button>';
     }
   }
 
@@ -220,6 +238,8 @@
     go(cur.step || "intake", cur.idx || 0);
   }
 
+  function verdictLabel(v) { return v === "fit" ? "Fit" : v === "nofit" ? "No fit" : ""; }
+
   /* ------------------------------------------------------------------ views */
 
   var VIEWS = {};
@@ -227,72 +247,67 @@
   VIEWS.home = function () {
     var open = store.sessions.filter(function (s) { return s.status !== "complete"; });
     var done = store.sessions.length - open.length;
-    var strip = [1, 3, 4, 5, 6, 8, 10, 11].map(function (id) {
-      return '<img src="' + byId[id].hero + '" alt="">';
-    }).join("");
     return (
-      '<section class="hero-home">' +
+      '<section class="home">' +
         "<div>" +
-          '<p class="muted small">Team Nudge · CSV2 · Activity 2 — Dispensing Mechanism Exploration</p>' +
           "<h1>Would you leave it out on display?</h1>" +
-          "<p>Participants sort " + C.length + " spray concepts into <b>Fit</b> or <b>No Fit</b> by looks alone, say where they'd keep and use each one, then see how each mechanism works and rank them. Everything is saved on this device as you go.</p>" +
-          '<div class="row"><button class="btn primary lg" data-action="new">Start new participant</button>' +
-          '<button class="btn lg" data-action="results">Results &amp; export</button></div>' +
-          '<p class="muted small" style="margin-top:12px">' + store.sessions.length + " session" + (store.sessions.length === 1 ? "" : "s") + " on this device · " + done + " complete</p>" +
+          '<p class="lede">Activity 2 for Team Nudge. Participants judge ' + C.length + " spray concepts on looks alone, then learn how each one works and rank them.</p>" +
+          '<div class="actions"><button class="btn primary" data-action="new">Start a session</button>' +
+          '<button class="btn" data-action="results">See results</button></div>' +
+          (open.length ? '<div class="resume-list"><h3>Unfinished sessions</h3>' + open.slice().reverse().map(function (s) {
+            return '<div class="resume-row"><span>' + esc(s.participant.name || "No name yet") + ' <span class="grey small">' + esc(s.participant.pid) +
+              ", " + esc(stepLabelFor(s)) + '</span></span><button class="btn" data-action="resume" data-id="' + esc(s.id) + '">Resume</button></div>';
+          }).join("") + "</div>" : "") +
         "</div>" +
-        '<div class="hero-strip">' + strip + "</div>" +
-      "</section>" +
-      '<section class="flow" style="margin-bottom:28px">' +
-        "<div><b>Participant</b>Name and home context</div>" +
-        "<div><b>Part A · Fit / No Fit</b>Looks only, plus where they'd put and use it</div>" +
-        "<div><b>Review sort</b>See both piles, move anything</div>" +
-        "<div><b>Part B · How it works</b>Act it out, reveal the steps, rate it</div>" +
-        "<div><b>Ranking</b>Most to least preferred, and why</div>" +
-      "</section>" +
-      (open.length ? '<section class="card"><h2>Pick up where you left off</h2><div class="table-wrap"><table><thead><tr><th>Participant</th><th>Started</th><th>Step</th><th></th></tr></thead><tbody>' +
-        open.slice().reverse().map(function (s) {
-          var st = FLOW[Math.max(0, stepIndex(s.step))].label;
-          return "<tr><td><b>" + esc(s.participant.pid) + "</b> " + esc(s.participant.name || "(no name yet)") + "</td><td>" +
-            dateStr(s.createdAt) + " " + timeStr(s.createdAt) + "</td><td>" + esc(st) +
-            '</td><td class="num"><button class="btn" data-action="resume" data-id="' + esc(s.id) + '">Resume</button></td></tr>';
-        }).join("") + "</tbody></table></div></section>" : "")
+        "<div></div>" +
+        "<div>" +
+          '<div class="shelf" aria-hidden="true">' + C.map(function (c) { return '<img src="' + c.shelf + '" alt="">'; }).join("") + "</div>" +
+          '<div class="shelf-meta"><span>' + C.length + " concepts</span><span>" +
+            (store.sessions.length ? store.sessions.length + " session" + (store.sessions.length === 1 ? "" : "s") + " on this device, " + done + " finished" : "No sessions yet") +
+          "</span></div>" +
+        "</div>" +
+      "</section>"
     );
   };
+
+  function stepLabelFor(s) {
+    var i = (s.idx || 0) + 1;
+    return { intake: "at sign-in", introA: "starting Part A", partA: "Part A, " + i + " of " + C.length, board: "reviewing piles",
+      introB: "starting Part B", partB: "Part B, " + i + " of " + C.length, rank: "ranking" }[s.step] || "in progress";
+  }
 
   VIEWS.intake = function () {
     var p = cur.participant;
     return (
-      '<div class="card stack" style="max-width:760px;margin:0 auto">' +
-        "<div><h1>Participant</h1><p class=\"muted\">Fill this in with the participant before starting. Only the name is required.</p></div>" +
-        '<div class="grid-2">' +
-          '<label class="field"><span>Participant name *</span><input type="text" data-bind="participant.name" value="' + esc(p.name) + '" placeholder="First name or alias" autocomplete="off"></label>' +
+      '<div class="narrow">' +
+        "<h1>Who's taking part?</h1>" +
+        '<p class="grey-lede">Only the name is needed. The rest helps when reading results later.</p>' +
+        '<div class="two" style="margin-top:40px">' +
+          '<label class="field"><span>Name</span><input type="text" data-bind="participant.name" value="' + esc(p.name) + '" autocomplete="off"></label>' +
           '<label class="field"><span>Participant ID</span><input type="text" data-bind="participant.pid" value="' + esc(p.pid) + '"></label>' +
           '<label class="field"><span>Moderator</span><input type="text" data-bind="participant.moderator" value="' + esc(p.moderator) + '"></label>' +
           '<label class="field"><span>Note-taker</span><input type="text" data-bind="participant.notetaker" value="' + esc(p.notetaker) + '"></label>' +
         "</div>" +
-        '<div><div class="q">Home type</div>' + chips("participant.homeType", O.homeType, { single: true }) + "</div>" +
-        '<div><div class="q">Household <small>(select all that apply)</small></div>' + chips("participant.household", O.household) + "</div>" +
-        '<div><div class="q">Home scent products they use now</div>' + chips("participant.products", O.products) + "</div>" +
-        '<div><div class="q">Where do they keep their air freshener spray today?</div>' + chips("participant.storage", O.storage, { single: true }) + "</div>" +
-        '<label class="field"><span>Session notes</span>' + textarea("participant.notes", "Anything worth noting before you start") + "</label>" +
-        '<div class="spread"><span class="muted small">Concept order: ' + (store.settings.randomize ? "randomized for this participant" : "1 → " + C.length) + "</span>" +
-        '<button class="btn primary lg" data-action="startA" id="startA" ' + (p.name.trim() ? "" : "disabled") + ">Start Part A</button></div>" +
+        '<div style="margin-top:48px">' +
+          '<div class="block"><div class="q">Home</div>' + chips("participant.homeType", O.homeType, { single: true }) + "</div>" +
+          '<div class="block"><div class="q">Lives with</div>' + chips("participant.household", O.household) + "</div>" +
+          '<div class="block"><div class="q">Scent products they use now</div>' + chips("participant.products", O.products) + "</div>" +
+          '<div class="block"><div class="q">Where their air freshener lives today</div>' + chips("participant.storage", O.storage, { single: true }) + "</div>" +
+          '<div class="block"><label class="field"><span>Notes</span>' + textarea("participant.notes", "") + "</label></div>" +
+        "</div>" +
+        '<div class="nav-row"><span class="grey small">' + (store.settings.randomize ? "Concepts will appear in a shuffled order." : "Concepts will appear in order, 1 to " + C.length + ".") + "</span>" +
+        '<button class="btn primary" data-action="startA" id="startA" ' + (p.name.trim() ? "" : "disabled") + ">Start Part A</button></div>" +
       "</div>"
     );
   };
 
   VIEWS.introA = function () {
     return (
-      '<div class="card center" style="max-width:720px;margin:40px auto;padding:40px">' +
-        '<p class="muted small">Part A · Fit / No Fit</p>' +
-        "<h1>Picture each one in your home</h1>" +
-        "<p>You'll see " + C.length + " spray bottle ideas, one at a time. For each, decide whether you'd feel comfortable leaving it out on display in your home.</p>" +
-        '<div class="grid-2" style="text-align:left;margin:24px 0">' +
-          '<div class="card" style="box-shadow:none;border-color:var(--fit)"><h3 style="color:var(--fit)">Fit</h3><p class="small" style="margin:0">I\'d be happy to leave this out where people can see it.</p></div>' +
-          '<div class="card" style="box-shadow:none;border-color:var(--nofit)"><h3 style="color:var(--nofit)">No Fit</h3><p class="small" style="margin:0">I\'d rather put this away, or wouldn\'t keep it.</p></div>' +
-        "</div>" +
-        '<p class="muted small">Go with your first impression. There are no right answers, and we won\'t explain how they work yet.</p>' +
-        '<button class="btn primary lg" data-action="beginA">Begin</button>' +
+      '<div class="narrow">' +
+        "<h1>Picture each one in your home.</h1>" +
+        '<p class="grey-lede">You\'ll see ' + C.length + " spray bottle ideas, one at a time. For each, decide whether you'd be comfortable leaving it out where people can see it. Go with your first impression.</p>" +
+        '<div class="legend"><div><b>Fit</b><span class="grey">I\'d leave this out.</span></div><div><b>No fit</b><span class="grey">I\'d put this away.</span></div></div>' +
+        '<button class="btn primary" data-action="beginA">Begin</button>' +
       "</div>"
     );
   };
@@ -304,70 +319,66 @@
     var reasons = a.verdict === "fit" ? O.fitReasons : a.verdict === "nofit" ? O.noFitReasons : null;
     return (
       '<div class="eval">' +
-        '<div class="stimulus">' +
-          '<div class="label"><span class="concept-num">' + esc(conceptLabel(c)) + "</span><span>" + (i + 1) + " of " + C.length + "</span></div>" +
-          '<img src="' + c.hero + '" alt="' + esc(conceptLabel(c)) + '">' +
-        "</div>" +
-        '<div class="stack">' +
-          '<div><div class="q">Would you feel comfortable leaving this on display in your home?</div>' +
-            '<div class="verdict">' +
-              '<button type="button" class="fit ' + (a.verdict === "fit" ? "on" : "") + '" data-action="verdict" data-val="fit">Fit<small>Leave it out <span class="kbd">F</span></small></button>' +
-              '<button type="button" class="nofit ' + (a.verdict === "nofit" ? "on" : "") + '" data-action="verdict" data-val="nofit">No Fit<small>Put it away <span class="kbd">N</span></small></button>' +
-            "</div></div>" +
+        '<div class="stimulus"><img src="' + c.hero + '" alt="' + esc(conceptLabel(c)) + '"><p class="caption">' + esc(conceptLabel(c)) + "</p></div>" +
+        '<div class="panel">' +
+          "<h2>Would you leave this out on display at home?</h2>" +
+          '<div class="verdict">' +
+            '<button type="button" class="' + (a.verdict === "fit" ? "on" : "") + '" data-action="verdict" data-val="fit" aria-pressed="' + (a.verdict === "fit") + '">Fit</button>' +
+            '<button type="button" class="' + (a.verdict === "nofit" ? "on" : "") + '" data-action="verdict" data-val="nofit" aria-pressed="' + (a.verdict === "nofit") + '">No fit</button>' +
+          "</div>" +
+          (a.verdict ? "" : '<p class="hint">Keyboard: <kbd>F</kbd> fit, <kbd>N</kbd> no fit</p>') +
           (reasons
-            ? '<div><div class="q">What made you decide? <small>(pick any)</small></div>' + chips(base + ".reasons", reasons, { cls: a.verdict }) + "</div>"
-            : '<p class="muted small">Pick Fit or No Fit to continue.</p>') +
-          '<div><div class="q">Where in your home would you put this?</div>' + chips(base + ".placeAt", O.rooms) + "</div>" +
-          '<div><div class="q">Where would you use it?</div>' + chips(base + ".useAt", O.rooms) + "</div>" +
-          '<details class="mod"' + (a.note || a.mentionedMechanism ? " open" : "") + "><summary>Moderator notes <span class=\"mod-tag\">not for participant</span></summary>" +
-            '<div class="stack">' +
-              '<div><div class="q">Did they bring up the nozzle / trigger / mechanism on their own?</div>' + chips(base + ".mentionedMechanism", ["Yes, unprompted", "Only when probed", "No"], { single: true }) + "</div>" +
-              textarea(base + ".note", "Quotes, probes, body language…") +
-            "</div>" +
-          "</details>" +
+            ? '<div class="reveal" style="margin-top:36px">' +
+                '<div class="block"><div class="q">What made you decide?</div>' + chips(base + ".reasons", reasons) + "</div>" +
+                '<div class="block"><div class="q">Where in your home would you put it?</div>' + chips(base + ".placeAt", O.rooms) + "</div>" +
+                '<div class="block"><div class="q">Where would you use it?</div>' + chips(base + ".useAt", O.rooms) + "</div>" +
+              "</div>"
+            : "") +
+          '<details class="mod"' + (a.note || a.mentionedMechanism ? " open" : "") + "><summary>Moderator notes</summary><div>" +
+            '<div class="block"><div class="q">Did they mention the nozzle or trigger without being asked?</div>' + chips(base + ".mentionedMechanism", ["Yes", "Only when asked", "No"], { single: true }) + "</div>" +
+            '<div class="block">' + textarea(base + ".note", "Quotes and observations") + "</div>" +
+          "</div></details>" +
           '<div class="nav-row">' +
-            '<button class="btn" data-action="prevA">' + (i === 0 ? "Back to intro" : "← Previous") + "</button>" +
-            '<button class="btn primary" data-action="nextA" ' + (a.verdict ? "" : "disabled") + ">" + (i === C.length - 1 ? "Review the sort →" : "Next →") + "</button>" +
+            '<button class="link" data-action="prevA">Back</button>' +
+            '<button class="btn primary" data-action="nextA" ' + (a.verdict ? "" : "disabled") + ">" + (i === C.length - 1 ? "Review piles" : "Next") + "</button>" +
           "</div>" +
         "</div>" +
       "</div>"
     );
   };
 
-  function thumb(id, extra) {
+  function bottle(id, moved, clickable) {
     var c = byId[id];
-    return '<button type="button" class="thumb ' + (extra || "") + '" data-action="flip" data-id="' + id + '" title="Tap to move">' +
-      '<span class="n">' + id + "</span><img src=\"" + c.hero + '" alt="' + esc(conceptLabel(c)) + '">' +
-      (store.settings.showNames ? '<div class="mv">' + esc(c.name) + "</div>" : "") + "</button>";
+    var tag = clickable ? "button" : "div";
+    return "<" + tag + ' class="bottle' + (moved ? " moved" : "") + '"' + (clickable ? ' type="button" data-action="flip" data-id="' + id + '" aria-label="Move ' + esc(conceptLabel(c)) + ' to the other pile"' : "") + ">" +
+      '<img src="' + c.shelf + '" alt=""><span class="n">' + (store.settings.showNames ? esc(c.name) : id) + (moved ? ", moved" : "") + "</span></" + tag + ">";
   }
 
   VIEWS.board = function () {
     var fits = cur.order.filter(function (id) { return (cur.partA[id] || {}).verdict === "fit"; });
     var nos = cur.order.filter(function (id) { return (cur.partA[id] || {}).verdict === "nofit"; });
-    var changed = function (id) { var a = cur.partA[id]; return a.beforeBoard && a.beforeBoard !== a.verdict ? "changed" : ""; };
+    var moved = function (id) { var a = cur.partA[id]; return a.beforeBoard && a.beforeBoard !== a.verdict; };
     return (
-      '<div class="spread" style="margin-bottom:18px"><div><p class="muted small" style="margin:0">Part A · Review</p><h1>Here\'s how you sorted them</h1>' +
-      '<p class="muted" style="margin:0">Looking at them side by side, would you move any? Tap a bottle to move it to the other side.</p></div></div>' +
+      '<div class="sort-head"><div><h1>Your two piles</h1><p class="grey" style="margin-top:12px">Seeing them together, would you move any? Tap a bottle to switch its pile.</p></div>' +
+      '<button class="btn primary" data-action="toIntroB">Continue to Part B</button></div>' +
       '<div class="board">' +
-        '<div class="col fit"><h2>Fit <span class="small">' + fits.length + "</span></h2><div class=\"thumbs\">" + fits.map(function (id) { return thumb(id, changed(id)); }).join("") + "</div></div>" +
-        '<div class="col nofit"><h2>No Fit <span class="small">' + nos.length + "</span></h2><div class=\"thumbs\">" + nos.map(function (id) { return thumb(id, changed(id)); }).join("") + "</div></div>" +
+        '<div class="col"><div class="col-head"><h2>Fit</h2><span>' + fits.length + '</span></div><div class="pile">' + fits.map(function (id) { return bottle(id, moved(id), true); }).join("") + "</div></div>" +
+        '<div class="col"><div class="col-head"><h2>No fit</h2><span>' + nos.length + '</span></div><div class="pile">' + nos.map(function (id) { return bottle(id, moved(id), true); }).join("") + "</div></div>" +
       "</div>" +
-      '<details class="mod" style="margin-top:18px"' + (cur.boardNote ? " open" : "") + "><summary>Moderator notes on the overall sort <span class=\"mod-tag\">not for participant</span></summary>" +
-        textarea("boardNote", "Patterns they noticed, what separates the two piles in their words…") +
-      "</details>" +
-      '<div class="nav-row"><button class="btn" data-action="backToA">← Back to last concept</button>' +
-      '<button class="btn primary" data-action="toIntroB">Continue to Part B →</button></div>'
+      '<details class="mod"' + (cur.boardNote ? " open" : "") + "><summary>Moderator notes</summary><div>" +
+        textarea("boardNote", "What separates the two piles, in their words") +
+      "</div></details>" +
+      '<div class="nav-row"><button class="link" data-action="backToA">Back to last concept</button></div>'
     );
   };
 
   VIEWS.introB = function () {
     return (
-      '<div class="card center" style="max-width:720px;margin:40px auto;padding:40px">' +
-        '<p class="muted small">Part B · How it works</p>' +
-        "<h1>Show us how you'd use it</h1>" +
-        "<p>We'll go through the bottles again. For each one, show us how you'd hold it and spray it. Then we'll show you how it's actually meant to work.</p>" +
-        '<p class="muted small">Moderator: let them act it out with the printed board before you tap “Reveal”.</p>' +
-        '<button class="btn primary lg" data-action="beginB">Begin Part B</button>' +
+      '<div class="narrow">' +
+        "<h1>Now, how would you use it?</h1>" +
+        '<p class="grey-lede">We\'ll go through them again. For each one, show us how you\'d hold it and spray it. Then we\'ll show you how it\'s meant to work.</p>' +
+        '<p class="grey small" style="margin:24px 0 40px">Moderator: let them act it out on the printed board before you reveal the steps.</p>' +
+        '<button class="btn primary" data-action="beginB">Begin Part B</button>' +
       "</div>"
     );
   };
@@ -381,32 +392,28 @@
     return (
       '<div class="eval">' +
         '<div class="stimulus' + (b.revealed ? " revealed" : "") + '">' +
-          '<div class="label"><span class="concept-num">' + esc(conceptLabel(c)) + "</span><span>" + (i + 1) + " of " + C.length +
-            (a.verdict ? ' · Part A: <b style="color:var(--' + a.verdict + ')">' + (a.verdict === "fit" ? "Fit" : "No Fit") + "</b>" : "") + "</span></div>" +
           '<img src="' + c.hero + '" alt="' + esc(conceptLabel(c)) + '">' +
-          (b.revealed ? '<div class="reveal-box"><div class="label"><span><b>How it works</b></span></div><img src="' + c.steps + '" alt="Step-by-step for ' + esc(conceptLabel(c)) + '"></div>' : "") +
+          '<p class="caption">' + esc(conceptLabel(c)) + (a.verdict ? ". Part A: " + verdictLabel(a.verdict) : "") + "</p>" +
+          (b.revealed ? '<div class="how reveal"><h3>How it works</h3><img src="' + c.steps + '" alt="Steps for ' + esc(conceptLabel(c)) + '"></div>' : "") +
         "</div>" +
-        '<div class="stack">' +
-          '<div class="card stack" style="box-shadow:none">' +
-            '<div><h3>1 · “Show me how you\'d hold it and spray it.”</h3><p class="muted small" style="margin:0">Moderator records what they do.</p></div>' +
-            '<div><div class="q">What did they try?</div>' + chips(base + ".predicted", O.gestures) + "</div>" +
-            '<div><div class="q">How did it go?</div>' + chips(base + ".fluency", ["Smooth, no hesitation", "Some hesitation", "Confused / stuck"], { single: true }) + "</div>" +
-            textarea(base + ".demoNote", "Steps, grip, where they looked for the nozzle, points of confusion…") +
-            (b.revealed ? "" : '<button class="btn primary" data-action="reveal">Reveal how it works</button>') +
-          "</div>" +
+        '<div class="panel">' +
+          "<h2>Show me how you'd hold it and spray it.</h2>" +
+          '<div class="block"><div class="q">What they tried</div>' + chips(base + ".predicted", O.gestures) + "</div>" +
+          '<div class="block"><div class="q">How it went</div>' + chips(base + ".fluency", ["Smoothly", "Some hesitation", "Got stuck"], { single: true }) + "</div>" +
+          '<div class="block">' + textarea(base + ".demoNote", "Grip, steps, where they looked for the nozzle") + "</div>" +
+          (b.revealed ? "" : '<div class="block"><button class="btn primary" data-action="reveal">Reveal how it works</button></div>') +
           (b.revealed
-            ? '<div class="card stack" style="box-shadow:none">' +
-                "<h3>2 · After seeing how it works</h3>" +
-                '<div><div class="q">Is this what you expected?</div>' + chips(base + ".match", ["Yes", "Partly", "No"], { single: true, rerender: true }) + "</div>" +
-                '<div><div class="q">How intuitive does it feel?</div>' + scale(base + ".intuitive", "Not at all", "Very intuitive") + "</div>" +
-                '<div><div class="q">How convenient would it be day to day?</div>' + scale(base + ".convenient", "Very inconvenient", "Very convenient") + "</div>" +
-                '<div><div class="q">Has this changed whether you\'d leave it out on display?</div>' + chips(base + ".displayShift", ["More likely now", "No change", "Less likely now"], { single: true }) + "</div>" +
-                '<label class="field"><span>Comments</span>' + textarea(base + ".note", "What they liked or didn't, in their words") + "</label>" +
+            ? '<div class="reveal" style="margin-top:48px">' +
+                '<div class="block"><div class="q">Is this what you expected?</div>' + chips(base + ".match", ["Yes", "Partly", "No"], { single: true }) + "</div>" +
+                '<div class="block"><div class="q">How intuitive is it?</div>' + scale(base + ".intuitive", "Not at all", "Very") + "</div>" +
+                '<div class="block"><div class="q">How convenient would it be every day?</div>' + scale(base + ".convenient", "Not at all", "Very") + "</div>" +
+                '<div class="block"><div class="q">Would you be more or less likely to leave it out now?</div>' + chips(base + ".displayShift", ["More likely", "No change", "Less likely"], { single: true }) + "</div>" +
+                '<div class="block"><label class="field"><span>Comments</span>' + textarea(base + ".note", "") + "</label></div>" +
               "</div>"
             : "") +
           '<div class="nav-row">' +
-            '<button class="btn" data-action="prevB">' + (i === 0 ? "Back to intro" : "← Previous") + "</button>" +
-            '<button class="btn primary" data-action="nextB" ' + (ready ? "" : "disabled") + ">" + (i === C.length - 1 ? "Go to ranking →" : "Next →") + "</button>" +
+            '<button class="link" data-action="prevB">Back</button>' +
+            '<button class="btn primary" data-action="nextB" ' + (ready ? "" : "disabled") + ">" + (i === C.length - 1 ? "Go to ranking" : "Next") + "</button>" +
           "</div>" +
         "</div>" +
       "</div>"
@@ -421,29 +428,22 @@
       touch();
     }
     return (
-      '<div class="eval">' +
+      '<div class="rank-wrap">' +
         "<div>" +
-          '<p class="muted small" style="margin:0">Ranking</p><h1>Rank them from most to least preferred</h1>' +
-          '<p class="muted">Drag the handle, or use the arrows. The list starts with your Fit picks on top.</p>' +
-          '<div class="rank-ends"><span>▲ Most preferred</span></div>' +
+          "<h1>Put them in order.</h1>" +
+          '<p class="grey" style="margin-top:12px">Favorite at the top. Drag a bottle, or use the arrows. Your Fit pile starts on top.</p>' +
           '<ol class="rank-list" id="rankList">' + cur.ranking.map(function (id, i) { return rankItem(id, i); }).join("") + "</ol>" +
-          '<div class="rank-ends" style="margin-top:6px"><span>▼ Least preferred</span></div>' +
+          '<div class="rank-ends"><span>Most preferred at the top</span><span>Least preferred at the bottom</span></div>' +
         "</div>" +
-        '<div class="stack">' +
-          '<div class="card stack" style="box-shadow:none">' +
-            "<h3>“What made you put them in this order?”</h3>" +
-            '<p class="muted small" style="margin:0">Let them answer in their own words. Don\'t suggest criteria.</p>' +
-            textarea("rankWhy", "Their reasons, in their words") +
-          "</div>" +
-          '<details class="mod"' + ((cur.rankFactors || []).length ? " open" : "") + "><summary>Code the factors they mentioned <span class=\"mod-tag\">not for participant</span></summary>" +
+        '<div class="panel">' +
+          '<div class="block"><label class="field"><span>What made you put them in this order?</span>' + textarea("rankWhy", "Their words. Don't suggest criteria.") + "</label></div>" +
+          '<div class="block"><div class="q">Would your top pick change where you keep air freshener?</div>' +
+            chips("displayImpact", ["Yes, I'd leave it out", "Maybe", "No"], { single: true }) + "</div>" +
+          '<details class="mod"' + ((cur.rankFactors || []).length ? " open" : "") + "><summary>Moderator: factors they mentioned</summary><div>" +
             chips("rankFactors", O.rankFactors) +
-          "</details>" +
-          '<div class="card stack" style="box-shadow:none">' +
-            "<h3>“Would your top pick change where you keep air freshener today?”</h3>" +
-            chips("displayImpact", ["Yes, I'd leave it out", "Maybe", "No, it'd still be put away"], { single: true }) +
-          "</div>" +
-          '<div class="nav-row"><button class="btn" data-action="backToB">← Back to Part B</button>' +
-          '<button class="btn primary lg" data-action="finish">Finish session</button></div>' +
+          "</div></details>" +
+          '<div class="nav-row"><button class="link" data-action="backToB">Back</button>' +
+          '<button class="btn primary" data-action="finish">Finish session</button></div>' +
         "</div>" +
       "</div>"
     );
@@ -453,9 +453,8 @@
     var c = byId[id], a = cur.partA[id] || {};
     return '<li class="rank-item" data-id="' + id + '">' +
       '<span class="pos">' + (i + 1) + "</span>" +
-      '<img src="' + c.hero + '" alt="">' +
-      "<span><b>" + esc(conceptLabel(c)) + "</b><br><span class=\"small\" style=\"color:var(--" + (a.verdict || "muted") + ')">' +
-        (a.verdict === "fit" ? "Fit" : a.verdict === "nofit" ? "No Fit" : "") + "</span></span>" +
+      '<img src="' + c.shelf + '" alt="" draggable="false">' +
+      '<span class="meta"><b>' + esc(store.settings.showNames ? c.name : "Concept " + c.id) + "</b>" + verdictLabel(a.verdict) + "</span>" +
       '<span class="arrows"><button type="button" data-action="up" data-id="' + id + '" aria-label="Move up">↑</button>' +
       '<button type="button" data-action="down" data-id="' + id + '" aria-label="Move down">↓</button>' +
       '<span class="handle" aria-hidden="true">⋮⋮</span></span>' +
@@ -463,22 +462,16 @@
   }
 
   VIEWS.done = function () {
-    var fits = cur.order.filter(function (id) { return (cur.partA[id] || {}).verdict === "fit"; });
+    var fits = cur.order.filter(function (id) { return (cur.partA[id] || {}).verdict === "fit"; }).length;
     return (
-      '<div class="card center" style="max-width:760px;margin:40px auto;padding:40px">' +
-        '<div class="done-mark">✓</div>' +
-        "<h1>Thank you, " + esc(cur.participant.name) + "!</h1>" +
-        '<p class="muted">Responses saved on this device.</p>' +
-        '<div class="grid-2" style="text-align:left;margin:24px 0">' +
-          '<div><div class="q">Fit (' + fits.length + ")</div><div class=\"thumbs\">" + fits.map(function (id) {
-            return '<div class="thumb" style="cursor:default"><span class="n">' + id + '</span><img src="' + byId[id].hero + '" alt=""></div>';
-          }).join("") + "</div></div>" +
-          '<div><div class="q">Top 3</div><div class="thumbs">' + cur.ranking.slice(0, 3).map(function (id, i) {
-            return '<div class="thumb" style="cursor:default"><span class="n">#' + (i + 1) + '</span><img src="' + byId[id].hero + '" alt=""><div class="mv">Concept ' + id + "</div></div>";
-          }).join("") + "</div></div>" +
-        "</div>" +
-        '<div class="row" style="justify-content:center"><button class="btn primary lg" data-action="new">Next participant</button>' +
-        '<button class="btn lg" data-action="results">Results &amp; export</button></div>' +
+      '<div class="narrow">' +
+        "<h1>Thank you, " + esc(cur.participant.name) + ".</h1>" +
+        '<p class="grey-lede">Everything is saved on this device. ' + fits + " of " + C.length + " went in the Fit pile. Their top three:</p>" +
+        '<div class="done-row">' + cur.ranking.slice(0, 3).map(function (id, i) {
+          return '<figure><img src="' + byId[id].shelf + '" alt=""><figcaption>' + (i + 1) + ". Concept " + id + "</figcaption></figure>";
+        }).join("") + "</div>" +
+        '<div class="row" style="display:flex;gap:10px"><button class="btn primary" data-action="new">Start next session</button>' +
+        '<button class="btn" data-action="results">See results</button></div>' +
       "</div>"
     );
   };
@@ -494,21 +487,19 @@
         .map(function (s) { return s.ranking.indexOf(c.id) + 1; }).filter(function (r) { return r > 0; });
       var fit = A.filter(function (a) { return a.verdict === "fit"; }).length;
       var reasons = [];
+      A.forEach(function (a) { reasons = reasons.concat(a.reasons || []); });
       var places = [];
-      A.forEach(function (a) { reasons = reasons.concat(a.reasons || []); places = places.concat(a.placeAt || []); });
+      A.forEach(function (a) { places = places.concat(a.placeAt || []); });
       var matched = B.filter(function (b) { return b.match; });
       return {
         c: c, n: A.length, fit: fit, fitRate: A.length ? fit / A.length : null,
-        avgRank: avg(ranks), nRank: ranks.length,
-        firsts: ranks.filter(function (r) { return r === 1; }).length,
+        avgRank: avg(ranks), firsts: ranks.filter(function (r) { return r === 1; }).length,
         match: matched.length ? matched.filter(function (b) { return b.match === "Yes"; }).length / matched.length : null,
         intuitive: avg(B.map(function (b) { return b.intuitive; })),
         convenient: avg(B.map(function (b) { return b.convenient; })),
-        confused: B.length ? B.filter(function (b) { return b.fluency === "Confused / stuck"; }).length / B.length : null,
-        ms: avg(A.map(function (a) { return a.ms; })),
-        reasons: counts(reasons).slice(0, 3),
-        places: counts(places).slice(0, 2),
-        revised: A.filter(function (a) { return a.beforeBoard && a.beforeBoard !== a.verdict; }).length
+        stuck: B.length ? B.filter(function (b) { return b.fluency === "Got stuck" || b.fluency === "Confused / stuck"; }).length / B.length : null,
+        reasons: counts(reasons).slice(0, 3), places: counts(places).slice(0, 2),
+        moved: A.filter(function (a) { return a.beforeBoard && a.beforeBoard !== a.verdict; }).length
       };
     });
   }
@@ -517,18 +508,23 @@
     var rows = aggregate();
     var S = store.sessions;
     var complete = S.filter(function (s) { return s.status === "complete"; }).length;
-    var withData = rows.filter(function (r) { return r.n; });
-    var bestFit = withData.slice().sort(function (a, b) { return b.fitRate - a.fitRate; })[0];
-    var bestRank = rows.filter(function (r) { return r.avgRank != null; }).sort(function (a, b) { return a.avgRank - b.avgRank; })[0];
-
     var levels = ["Fully concealed", "Partially concealed", "Not concealed"];
     var groups = levels.map(function (lv) {
       var rs = rows.filter(function (r) { return r.c.concealment === lv; });
       var n = rs.reduce(function (a, r) { return a + r.n; }, 0);
       var f = rs.reduce(function (a, r) { return a + r.fit; }, 0);
-      return { lv: lv, k: rs.length, n: n, rate: n ? f / n : null, rank: avg(rs.map(function (r) { return r.avgRank; })),
+      return { lv: lv, k: rs.length, rate: n ? f / n : null, rank: avg(rs.map(function (r) { return r.avgRank; })),
         intuitive: avg(rs.map(function (r) { return r.intuitive; })), match: avg(rs.map(function (r) { return r.match; })) };
     });
+    var ranked = rows.filter(function (r) { return r.avgRank != null; }).sort(function (a, b) { return a.avgRank - b.avgRank; });
+
+    var summary = !S.length
+      ? "No sessions yet. Start one from the home screen, or import a JSON export from another device."
+      : "<b>" + S.length + " participant" + (S.length === 1 ? "" : "s") + "</b>, " + complete + " finished. " +
+        (groups[0].rate != null && groups[2].rate != null
+          ? "Fully concealed concepts were put in the Fit pile <b>" + pct(groups[0].rate) + "</b> of the time, against <b>" + pct(groups[2].rate) + "</b> for exposed mechanisms. "
+          : "") +
+        (ranked.length ? "Best average rank so far: <b>concept " + ranked[0].c.id + "</b>, " + esc(ranked[0].c.name) + "." : "");
 
     var sorted = rows.slice().sort(function (a, b) {
       var va = sortVal(a), vb = sortVal(b);
@@ -537,76 +533,62 @@
       if (vb == null) return -1;
       return (va < vb ? -1 : va > vb ? 1 : 0) * sortDir;
     });
-
     function th(key, label, num) {
-      var arrow = sortKey === key ? (sortDir === 1 ? " ↑" : " ↓") : "";
-      return '<th class="' + (num ? "num" : "") + '"><button class="btn ghost small" style="min-height:0;padding:0;text-transform:inherit;letter-spacing:inherit;font-size:inherit" data-action="sort" data-key="' + key + '">' + label + arrow + "</button></th>";
+      return '<th class="' + (num ? "num" : "") + '"><button class="sort' + (sortKey === key ? " on" : "") + '" data-action="sort" data-key="' + key + '">' + label + (sortKey === key ? (sortDir === 1 ? " ↑" : " ↓") : "") + "</button></th>";
+    }
+    function bar(rate) {
+      return '<div class="bar"><span><i style="width:' + Math.round((rate || 0) * 100) + '%"></i></span><em>' + pct(rate) + "</em></div>";
     }
 
     return (
-      '<div class="spread" style="margin-bottom:20px"><div><p class="muted small" style="margin:0">Activity 2 · All participants on this device</p><h1>Results</h1></div>' +
-      '<div class="row no-print">' +
-        '<button class="btn primary" data-action="csv" ' + (S.length ? "" : "disabled") + ">Export CSV</button>" +
-        '<button class="btn" data-action="json" ' + (S.length ? "" : "disabled") + ">Export JSON</button>" +
-        '<label class="btn" style="display:inline-flex;align-items:center">Import JSON<input type="file" accept="application/json,.json" id="importFile" hidden></label>' +
-      "</div></div>" +
+      '<div class="results-head"><div><h1>Results</h1><p class="summary">' + summary + "</p></div>" +
+        '<div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap">' +
+          '<button class="btn primary" data-action="csv" ' + (S.length ? "" : "disabled") + ">Download CSV</button>" +
+          '<button class="btn" data-action="json" ' + (S.length ? "" : "disabled") + ">Download JSON</button>" +
+          '<label class="btn" style="display:inline-flex;align-items:center">Import JSON<input type="file" accept="application/json,.json" id="importFile" hidden></label>' +
+        "</div></div>" +
 
-      '<div class="kpis" style="margin-bottom:20px">' +
-        '<div class="kpi"><b>' + S.length + "</b><span>participants (" + complete + " complete)</span></div>" +
-        '<div class="kpi"><b>' + (bestFit ? "#" + bestFit.c.id : "—") + "</b><span>highest Fit rate" + (bestFit ? " · " + pct(bestFit.fitRate) : "") + "</span></div>" +
-        '<div class="kpi"><b>' + (bestRank ? "#" + bestRank.c.id : "—") + "</b><span>best average rank" + (bestRank ? " · " + fmt(bestRank.avgRank) : "") + "</span></div>" +
-        '<div class="kpi"><b>' + pct(groups[0].rate) + " vs " + pct(groups[2].rate) + "</b><span>Fit rate: fully concealed vs not concealed</span></div>" +
-      "</div>" +
-
-      '<section class="card" style="margin-bottom:20px"><h2>By concealment level</h2>' +
-        '<p class="muted small">Checks the assumption that hiding the mechanism makes the product feel more display-worthy, provided it stays intuitive.</p>' +
-        '<div class="table-wrap"><table><thead><tr><th>Level</th><th class="num">Concepts</th><th>Fit rate</th><th class="num">Avg rank</th><th class="num">Matched expectations</th><th class="num">Intuitive (1–5)</th></tr></thead><tbody>' +
+      '<div class="section"><h3>By concealment</h3><div class="table-wrap"><table><thead><tr><th>Mechanism</th><th class="num">Concepts</th><th>Fit rate</th><th class="num">Avg rank</th><th class="num">As expected</th><th class="num">Intuitive</th></tr></thead><tbody>' +
         groups.map(function (g) {
-          return "<tr><td><b>" + g.lv + '</b></td><td class="num">' + g.k + '</td><td><div class="bar-cell"><div class="bar"><i style="width:' + Math.round((g.rate || 0) * 100) + '%"></i></div>' + pct(g.rate) + '</div></td><td class="num">' + fmt(g.rank) + '</td><td class="num">' + pct(g.match) + '</td><td class="num">' + fmt(g.intuitive) + "</td></tr>";
-        }).join("") + "</tbody></table></div></section>" +
+          return "<tr><td>" + g.lv + '</td><td class="num">' + g.k + "</td><td>" + bar(g.rate) + '</td><td class="num">' + fmt(g.rank) + '</td><td class="num">' + pct(g.match) + '</td><td class="num">' + fmt(g.intuitive) + "</td></tr>";
+        }).join("") + "</tbody></table></div></div>" +
 
-      '<section class="card" style="margin-bottom:20px"><h2>By concept</h2>' +
-        '<div class="table-wrap"><table><thead><tr>' +
-          th("id", "#", false) + "<th>Concept</th>" + th("fitRate", "Fit rate", false) + th("avgRank", "Avg rank", true) + th("firsts", "#1 picks", true) +
-          th("match", "Matched", true) + th("intuitive", "Intuitive", true) + th("convenient", "Convenient", true) + th("confused", "Got stuck", true) +
-          th("ms", "Decide (s)", true) + "<th>Top reasons</th><th>Would put it</th>" +
-        "</tr></thead><tbody>" +
+      '<div class="section"><h3>By concept</h3><div class="table-wrap"><table><thead><tr>' +
+        th("id", "Concept", false) + th("fitRate", "Fit rate", false) + th("avgRank", "Avg rank", true) + th("firsts", "Ranked first", true) +
+        th("match", "As expected", true) + th("intuitive", "Intuitive", true) + th("convenient", "Convenient", true) + th("stuck", "Got stuck", true) +
+        "<th>Why</th><th>Where it would go</th></tr></thead><tbody>" +
         sorted.map(function (r) {
           return "<tr>" +
-            '<td><b>' + r.c.id + "</b></td>" +
-            '<td class="concept-cell"><div class="row" style="flex-wrap:nowrap"><img class="mini-thumb" src="' + r.c.hero + '" alt=""><div><b>' + esc(r.c.name) + '</b><br><span class="muted small">' + esc(r.c.concealment) + "</span></div></div></td>" +
-            '<td><div class="bar-cell"><div class="bar"><i style="width:' + Math.round((r.fitRate || 0) * 100) + '%"></i></div><span>' + pct(r.fitRate) + ' <span class="muted small">' + r.fit + "/" + r.n + (r.revised ? " · " + r.revised + " moved" : "") + "</span></span></div></td>" +
-            '<td class="num">' + fmt(r.avgRank) + '</td><td class="num">' + r.firsts + '</td><td class="num">' + pct(r.match) + '</td><td class="num">' + fmt(r.intuitive) +
-            '</td><td class="num">' + fmt(r.convenient) + '</td><td class="num">' + pct(r.confused) + '</td><td class="num">' + (r.ms == null ? "—" : (r.ms / 1000).toFixed(1)) + "</td>" +
-            "<td>" + r.reasons.map(function (x) { return '<span class="tag">' + esc(x[0]) + " ×" + x[1] + "</span>"; }).join("") + "</td>" +
-            "<td>" + r.places.map(function (x) { return '<span class="tag">' + esc(x[0]) + " ×" + x[1] + "</span>"; }).join("") + "</td>" +
+            '<td><div class="c-cell"><img src="' + r.c.shelf + '" alt=""><span>' + r.c.id + ". " + esc(r.c.name) + "<small>" + esc(r.c.concealment) + "</small></span></div></td>" +
+            "<td>" + bar(r.fitRate) + '<span class="grey small">' + (r.n ? r.fit + " of " + r.n + (r.moved ? ", " + r.moved + " moved" : "") : "") + "</span></td>" +
+            '<td class="num">' + fmt(r.avgRank) + '</td><td class="num">' + r.firsts + '</td><td class="num">' + pct(r.match) +
+            '</td><td class="num">' + fmt(r.intuitive) + '</td><td class="num">' + fmt(r.convenient) + '</td><td class="num">' + pct(r.stuck) + "</td>" +
+            '<td class="reasons">' + r.reasons.map(function (x) { return esc(x[0]) + " (" + x[1] + ")"; }).join(", ") + "</td>" +
+            '<td class="reasons">' + r.places.map(function (x) { return esc(x[0]) + " (" + x[1] + ")"; }).join(", ") + "</td>" +
           "</tr>";
         }).join("") + "</tbody></table></div>" +
-        '<p class="muted small" style="margin-top:10px">Avg rank uses completed sessions only (1 = most preferred). “Decide” is seconds from seeing the concept to the first Fit / No Fit tap.</p>' +
-      "</section>" +
+        '<p class="grey small" style="margin-top:12px">Avg rank counts finished sessions only. 1 is most preferred.</p></div>' +
 
-      '<section class="card" style="margin-bottom:20px"><h2>Participants</h2>' +
+      '<div class="section"><h3>Participants</h3>' +
         (S.length ? '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Date</th><th>Moderator</th><th>Status</th><th class="num">Fit</th><th>Top pick</th><th></th></tr></thead><tbody>' +
           S.slice().reverse().map(function (s) {
             var fits = Object.keys(s.partA).filter(function (k) { return s.partA[k].verdict === "fit"; }).length;
-            return "<tr><td><b>" + esc(s.participant.pid) + "</b></td><td>" + esc(s.participant.name) + "</td><td>" + dateStr(s.createdAt) + "</td><td>" + esc(s.participant.moderator) +
-              '</td><td><span class="pill ' + (s.status === "complete" ? "complete" : "progress") + '">' + (s.status === "complete" ? "Complete" : "In progress") + "</span></td>" +
-              '<td class="num">' + fits + "/" + C.length + "</td><td>" + (s.status === "complete" && s.ranking.length ? "Concept " + s.ranking[0] : "—") + "</td>" +
-              '<td class="num"><div class="row" style="justify-content:flex-end;flex-wrap:nowrap">' +
+            return "<tr><td>" + esc(s.participant.pid) + "</td><td>" + esc(s.participant.name) + "</td><td>" + dateStr(s.createdAt) + "</td><td>" + esc(s.participant.moderator) +
+              '</td><td><span class="status ' + (s.status === "complete" ? "complete" : "") + '">' + (s.status === "complete" ? "Finished" : esc(stepLabelFor(s))) + "</span></td>" +
+              '<td class="num">' + fits + "</td><td>" + (s.status === "complete" && s.ranking.length ? "Concept " + s.ranking[0] : "") + "</td>" +
+              '<td class="num"><div style="display:flex;gap:6px;justify-content:flex-end">' +
                 '<button class="btn" data-action="resume" data-id="' + esc(s.id) + '">' + (s.status === "complete" ? "Open" : "Resume") + "</button>" +
-                '<button class="btn danger ' + (armedDelete === s.id ? "armed" : "") + '" data-action="delete" data-id="' + esc(s.id) + '">' + (armedDelete === s.id ? "Confirm delete" : "Delete") + "</button>" +
+                '<button class="btn danger ' + (armedDelete === s.id ? "armed" : "") + '" data-action="delete" data-id="' + esc(s.id) + '">' + (armedDelete === s.id ? "Delete for good" : "Delete") + "</button>" +
               "</div></td></tr>";
-          }).join("") + "</tbody></table></div>" : '<p class="muted">No sessions yet.</p>') +
-      "</section>" +
+          }).join("") + "</tbody></table></div>" : '<p class="empty">Nobody yet.</p>') +
+      "</div>" +
 
-      '<section class="card no-print"><h2>Settings</h2>' +
-        '<div class="stack">' +
-          '<div class="spread"><div><b>Randomize concept order</b><br><span class="muted small">Each new participant sees the 11 concepts in a different order, to reduce order effects. The order is saved with their responses.</span></div>' +
-            '<button class="btn" data-action="setting" data-key="randomize">' + (store.settings.randomize ? "On" : "Off") + "</button></div>" +
-          '<div class="spread"><div><b>Show concept names on screen</b><br><span class="muted small">Off by default, so labels like “Fully concealed” don\'t steer participants.</span></div>' +
-            '<button class="btn" data-action="setting" data-key="showNames">' + (store.settings.showNames ? "On" : "Off") + "</button></div>" +
-        "</div>" +
-      "</section>"
+      '<div class="section no-print"><h3>Settings</h3>' +
+        '<div class="toggle-row"><div>Shuffle concept order<p>Each new participant sees the concepts in a different order. The order is saved with their answers.</p></div>' +
+          '<button class="switch ' + (store.settings.randomize ? "on" : "") + '" role="switch" aria-checked="' + !!store.settings.randomize + '" aria-label="Shuffle concept order" data-action="setting" data-key="randomize"></button></div>' +
+        '<div class="toggle-row"><div>Show concept names to participants<p>Off by default, so names like “Fully concealed” don\'t steer answers.</p></div>' +
+          '<button class="switch ' + (store.settings.showNames ? "on" : "") + '" role="switch" aria-checked="' + !!store.settings.showNames + '" aria-label="Show concept names" data-action="setting" data-key="showNames"></button></div>' +
+      "</div>"
     );
   };
 
@@ -847,7 +829,7 @@
     sort: function (el) {
       var k = el.getAttribute("data-key");
       if (sortKey === k) sortDir = -sortDir;
-      else { sortKey = k; sortDir = (k === "id" || k === "avgRank" || k === "confused" || k === "ms") ? 1 : -1; }
+      else { sortKey = k; sortDir = (k === "id" || k === "avgRank" || k === "stuck") ? 1 : -1; }
       render(true);
     },
     csv: function () { download("fitnofit-results-" + stamp() + ".csv", toCSV(), "text/csv;charset=utf-8"); },
