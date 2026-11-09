@@ -310,3 +310,9 @@ th .sort.on { color: var(--ink); }
 }
 .fs-btn:hover { border-color: var(--ink); }
 @media print { .fs-btn { display: none; } }
+
+.resume-actions { display: flex; gap: 6px; flex: none; }
+.resume-row .btn.danger { color: var(--grey); }
+.resume-row .btn.danger.armed { color: #fff; }
+.resume-clear { padding-top: 12px; border-top: 1px solid var(--rule); text-align: right; }
+.link.armed-link, .link.armed-link:hover { color: #c43c2b; }

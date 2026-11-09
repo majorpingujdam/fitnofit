@@ -293,8 +293,14 @@
             '<button class="resume-toggle" data-action="toggleOpen" aria-expanded="' + showOpen + '">' + (showOpen ? "Hide" : "Show") + " unfinished sessions (" + open.length + ")</button>" +
             (showOpen ? '<div class="resume-rows">' + open.slice().reverse().map(function (s) {
               return '<div class="resume-row"><span>' + esc(s.participant.name || "No name yet") + ' <span class="grey small">' + esc(s.participant.pid) +
-                ", " + esc(stepLabelFor(s)) + '</span></span><button class="btn" data-action="resume" data-id="' + esc(s.id) + '">Resume</button></div>';
-            }).join("") + "</div>" : "") +
+                ", " + esc(stepLabelFor(s)) + '</span></span><span class="resume-actions">' +
+                '<button class="btn" data-action="resume" data-id="' + esc(s.id) + '">Resume</button>' +
+                '<button class="btn danger' + (armedDelete === s.id ? " armed" : "") + '" data-action="delete" data-id="' + esc(s.id) + '">' + (armedDelete === s.id ? "Confirm" : "Remove") + "</button>" +
+                "</span></div>";
+            }).join("") +
+              '<div class="resume-clear"><button class="link' + (armedDelete === "ALL_OPEN" ? " armed-link" : "") + '" data-action="clearOpen">' +
+                (armedDelete === "ALL_OPEN" ? "Click again to remove all " + open.length + " unfinished sessions" : "Remove all unfinished") + "</button></div>" +
+            "</div>" : "") +
           "</aside>" : "") +
         "</div>" +
         "<div></div>" +
@@ -761,6 +767,11 @@
     "new": function () { cur = newSession(); go("intake"); },
     demo: function (el) { startDemo(el.getAttribute("data-step")); },
     toggleOpen: function () { showOpen = !showOpen; render(true); },
+    clearOpen: function () {
+      if (armedDelete !== "ALL_OPEN") { armedDelete = "ALL_OPEN"; render(true); return; }
+      store.sessions = store.sessions.filter(function (s) { return s.status === "complete"; });
+      armedDelete = null; save(); render(true);
+    },
     resume: function (el) { resume(el.getAttribute("data-id")); },
     startA: function () { if (cur.participant.name.trim()) go("introA"); },
     beginA: function () { go("partA", 0); },
@@ -894,7 +905,8 @@
     if (!el || el.disabled) return;
     var fn = ACTIONS[el.getAttribute("data-action")];
     if (!fn) return;
-    if (el.getAttribute("data-action") !== "delete" && armedDelete) armedDelete = null;
+    var act = el.getAttribute("data-action");
+    if (act !== "delete" && act !== "clearOpen" && armedDelete) armedDelete = null;
     e.preventDefault();
     fn(el);
   });
