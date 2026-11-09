@@ -21,6 +21,7 @@
   var shownAt = 0;             // when the current Part A stimulus appeared
   var armedDelete = null;      // session id waiting for a second click
   var sortKey = "id", sortDir = 1;
+  var showOpen = false;        // home: unfinished sessions list expanded
 
   var app = document.getElementById("app");
   var progressEl = document.getElementById("progress");
@@ -63,6 +64,7 @@
   function touch() {
     if (!cur) return;
     cur.updatedAt = new Date().toISOString();
+    if (cur.demo) return;
     save();
     var s = document.getElementById("saved");
     if (s) s.textContent = "Saved " + timeStr(cur.updatedAt);
@@ -171,7 +173,8 @@
     if (cur && view !== "home" && view !== "results") {
       progressEl.textContent = (cur.participant.name ? cur.participant.name + ", " : "") + stepLabel().charAt(0).toLowerCase() + stepLabel().slice(1);
       if (!cur.participant.name) progressEl.textContent = stepLabel();
-      rightEl.innerHTML = '<span id="saved">' + (cur.updatedAt ? "Saved " + timeStr(cur.updatedAt) : "") +
+      if (cur.demo) progressEl.textContent = "Demo, " + stepLabel().charAt(0).toLowerCase() + stepLabel().slice(1) + ". Nothing is saved.";
+      rightEl.innerHTML = '<span id="saved">' + (cur.demo ? "" : cur.updatedAt ? "Saved " + timeStr(cur.updatedAt) : "") +
         '</span><button class="link" data-action="exit">Exit</button>';
       bar.hidden = false;
       bar.firstChild.style.width = Math.round(progressFraction() * 100) + "%";
@@ -201,13 +204,14 @@
 
   function render(keepScroll) {
     var y = window.scrollY;
+    hidePeek();
     renderChrome();
     var fn = VIEWS[view] || VIEWS.home;
     app.innerHTML = fn();
     if (keepScroll) window.scrollTo(0, y);
   }
 
-  function newSession() {
+  function newSession(demo) {
     var order = C.map(function (c) { return c.id; });
     if (store.settings.randomize) shuffle(order);
     var n = store.sessions.length + 1;
@@ -224,9 +228,27 @@
       partA: {}, boardChanges: [],
       ranking: [], slots: null, rankWhy: "", rankFactors: []
     };
+    if (demo) {            // demo: kept in memory only, never saved or counted
+      s.demo = true;
+      s.participant.pid = "Demo";
+      s.participant.name = "Demo";
+      return s;
+    }
     store.sessions.push(s);
     save();
     return s;
+  }
+
+  // Demo jumps straight into an activity with sample answers filled in.
+  function startDemo(step) {
+    cur = newSession(true);
+    if (step !== "partA") {
+      cur.order.forEach(function (id, i) {
+        var v = Math.random() < 0.5 ? "fit" : "nofit";
+        cur.partA[id] = { verdict: v, first: v, beforeBoard: v, ms: 800 + Math.round(Math.random() * 3000) };
+      });
+    }
+    go(step, 0);
   }
 
   function resume(id) {
@@ -254,11 +276,19 @@
           '<p class="lede">Activity 2 for Team Nudge. Participants judge ' + C.length + " spray concepts on looks alone, then rank all of them from most to least favorite.</p>" +
           '<div class="actions"><button class="btn primary" data-action="new">Start a session</button>' +
           '<button class="btn" data-action="results">See results</button></div>' +
+          '<div class="demo-row"><span class="grey small">Try a demo, nothing is saved</span>' +
+            '<button class="link-pill" data-action="demo" data-step="partA">1. Fit / No fit</button>' +
+            '<button class="link-pill" data-action="demo" data-step="board">2. Debrief</button>' +
+            '<button class="link-pill" data-action="demo" data-step="line">3. Ranking</button>' +
+          "</div>" +
         "</div>" +
-          (open.length ? '<aside class="resume-list"><h3>Unfinished sessions</h3>' + open.slice().reverse().map(function (s) {
-            return '<div class="resume-row"><span>' + esc(s.participant.name || "No name yet") + ' <span class="grey small">' + esc(s.participant.pid) +
-              ", " + esc(stepLabelFor(s)) + '</span></span><button class="btn" data-action="resume" data-id="' + esc(s.id) + '">Resume</button></div>';
-          }).join("") + "</aside>" : "") +
+          (open.length ? '<aside class="resume-list">' +
+            '<button class="resume-toggle" data-action="toggleOpen" aria-expanded="' + showOpen + '">' + (showOpen ? "Hide" : "Show") + " unfinished sessions (" + open.length + ")</button>" +
+            (showOpen ? '<div class="resume-rows">' + open.slice().reverse().map(function (s) {
+              return '<div class="resume-row"><span>' + esc(s.participant.name || "No name yet") + ' <span class="grey small">' + esc(s.participant.pid) +
+                ", " + esc(stepLabelFor(s)) + '</span></span><button class="btn" data-action="resume" data-id="' + esc(s.id) + '">Resume</button></div>';
+            }).join("") + "</div>" : "") +
+          "</aside>" : "") +
         "</div>" +
         "<div></div>" +
         "<div>" +
@@ -330,11 +360,12 @@
     );
   };
 
-  function bottle(id, moved, clickable) {
-    var c = byId[id];
-    var tag = clickable ? "button" : "div";
-    return "<" + tag + ' class="bottle' + (moved ? " moved" : "") + '"' + (clickable ? ' type="button" data-action="flip" data-id="' + id + '" aria-label="Move ' + esc(conceptLabel(c)) + ' to the other pile"' : "") + ">" +
-      '<img src="' + c.shelf + '" alt=""><span class="n">' + (store.settings.showNames ? esc(c.name) : id) + (moved ? ", moved" : "") + "</span></" + tag + ">";
+  function bottle(id, moved) {
+    var c = byId[id], v = (cur.partA[id] || {}).verdict;
+    var to = v === "fit" ? "No fit" : "Fit";
+    return '<button type="button" class="bottle' + (moved ? " moved" : "") + '" data-action="flip" data-id="' + id + '" aria-label="Move ' + esc(conceptLabel(c)) + " to " + to + '">' +
+      '<img src="' + c.shelf + '" alt=""><span class="n">' + (store.settings.showNames ? esc(c.name) : id) + (moved ? ", moved" : "") + "</span>" +
+      '<span class="move">' + (v === "fit" ? "Move to No fit →" : "← Move to Fit") + "</span></button>";
   }
 
   VIEWS.board = function () {
@@ -342,11 +373,11 @@
     var nos = cur.order.filter(function (id) { return (cur.partA[id] || {}).verdict === "nofit"; });
     var moved = function (id) { var a = cur.partA[id]; return a.beforeBoard && a.beforeBoard !== a.verdict; };
     return (
-      '<div class="sort-head"><div><h1>Your two piles</h1><p class="grey" style="margin-top:12px">Seeing them together, would you move any? Tap a bottle to switch its pile.</p></div>' +
+      '<div class="sort-head"><div><h1>Debrief - Your 2 Piles</h1><p class="grey" style="margin-top:12px">Changed your mind? You are able to switch sides by clicking any sketch, and switch it back at any time.</p></div>' +
       '<button class="btn primary" data-action="toIntroB">Continue to Part B</button></div>' +
       '<div class="board">' +
-        '<div class="col"><div class="col-head"><h2>Fit</h2><span>' + fits.length + '</span></div><div class="pile">' + fits.map(function (id) { return bottle(id, moved(id), true); }).join("") + "</div></div>" +
-        '<div class="col"><div class="col-head"><h2>No fit</h2><span>' + nos.length + '</span></div><div class="pile">' + nos.map(function (id) { return bottle(id, moved(id), true); }).join("") + "</div></div>" +
+        '<div class="col"><div class="col-head"><h2>Fit</h2><span>' + fits.length + '</span></div><div class="pile">' + fits.map(function (id) { return bottle(id, moved(id)); }).join("") + "</div></div>" +
+        '<div class="col"><div class="col-head"><h2>No fit</h2><span>' + nos.length + '</span></div><div class="pile">' + nos.map(function (id) { return bottle(id, moved(id)); }).join("") + "</div></div>" +
       "</div>" +
       '<details class="mod"' + (cur.boardNote ? " open" : "") + "><summary>Moderator notes</summary><div>" +
         textarea("boardNote", "What separates the two piles, in their words") +
@@ -392,7 +423,7 @@
       '<div class="tray' + (tray.length ? "" : " empty") + (pickedInSlot ? " can-drop" : "") + '"' + (pickedInSlot ? ' data-action="toTray" title="Put it back"' : "") + ">" +
         (tray.length
           ? tray.map(function (id) {
-              return '<button type="button" class="tray-bottle' + (picked === id ? " picked" : "") + '" data-action="pickBottle" data-id="' + id + '" aria-pressed="' + (picked === id) + '" aria-label="' + esc(conceptLabel(byId[id])) + '">' +
+              return '<button type="button" class="tray-bottle' + (picked === id ? " picked" : "") + '" data-action="pickBottle" data-id="' + id + '" data-peek="' + byId[id].hero + '" aria-pressed="' + (picked === id) + '" aria-label="' + esc(conceptLabel(byId[id])) + '">' +
                 '<img src="' + byId[id].shelf + '" alt=""><span class="n">' + id + "</span></button>";
             }).join("")
           : '<p class="tray-empty">' + (pickedInSlot ? "Tap here to take it off the line" : "To take a bottle off the line, tap it, then tap here.") + "</p>") +
@@ -401,7 +432,7 @@
       '<div class="slots' + (picked != null ? " armed" : "") + '">' +
         cur.slots.map(function (id, i) {
           var label = "Spot " + (i + 1) + (id != null ? ", " + conceptLabel(byId[id]) : ", empty");
-          return '<button type="button" class="slot' + (id != null ? " filled" : "") + (id != null && picked === id ? " picked" : "") + '" data-action="slot" data-i="' + i + '" aria-label="' + esc(label) + '">' +
+          return '<button type="button" class="slot' + (id != null ? " filled" : "") + (id != null && picked === id ? " picked" : "") + '" data-action="slot" data-i="' + i + '"' + (id != null ? ' data-peek="' + byId[id].hero + '"' : "") + ' aria-label="' + esc(label) + '">' +
             (id != null ? '<img src="' + byId[id].shelf + '" alt=""><span class="cid">' + id + "</span>" : "") +
             '<span class="pos">' + (i + 1) + "</span></button>";
         }).join("") +
@@ -624,6 +655,52 @@
     setTimeout(updateBanner, 4000);
   }
 
+  /* ------------------------------------------------------------------ hover preview */
+
+  // Part B: hovering a sketch with a mouse shows the full concept picture (both bottles).
+  var peekEl = null, peekFor = null;
+
+  function showPeek(target) {
+    if (!peekEl) {
+      peekEl = document.createElement("div");
+      peekEl.className = "peek";
+      peekEl.setAttribute("aria-hidden", "true");
+      peekEl.innerHTML = "<img alt=\"\">";
+      document.body.appendChild(peekEl);
+    }
+    var img = peekEl.firstChild;
+    peekFor = target;
+    img.onload = function () { if (peekFor === target) placePeek(target); };
+    if (img.getAttribute("src") !== target.getAttribute("data-peek")) img.src = target.getAttribute("data-peek");
+    peekEl.classList.add("on");
+    placePeek(target);
+  }
+
+  function placePeek(target) {
+    var r = target.getBoundingClientRect(), pw = peekEl.offsetWidth, ph = peekEl.offsetHeight, m = 12;
+    var left = Math.max(m, Math.min(window.innerWidth - pw - m, r.left + r.width / 2 - pw / 2));
+    var top = r.top - ph - m;
+    if (top < 64) top = Math.min(window.innerHeight - ph - m, r.bottom + m);   // not enough room above: show below
+    peekEl.style.left = left + "px";
+    peekEl.style.top = top + "px";
+  }
+
+  function hidePeek() {
+    peekFor = null;
+    if (peekEl) peekEl.classList.remove("on");
+  }
+
+  document.addEventListener("pointerover", function (e) {
+    if (e.pointerType !== "mouse") return;
+    var t = e.target.closest && e.target.closest("[data-peek]");
+    if (t && t !== peekFor) showPeek(t);
+  });
+  document.addEventListener("pointerout", function (e) {
+    var t = e.target.closest && e.target.closest("[data-peek]");
+    if (t && !(e.relatedTarget && t.contains(e.relatedTarget))) hidePeek();
+  });
+  window.addEventListener("scroll", hidePeek, { passive: true });
+
   /* ------------------------------------------------------------------ events */
 
   var ACTIONS = {
@@ -631,6 +708,8 @@
     exit: function () { cur = null; view = "home"; render(); window.scrollTo(0, 0); },
     results: function () { cur = null; view = "results"; armedDelete = null; render(); window.scrollTo(0, 0); },
     "new": function () { cur = newSession(); go("intake"); },
+    demo: function (el) { startDemo(el.getAttribute("data-step")); },
+    toggleOpen: function () { showOpen = !showOpen; render(true); },
     resume: function (el) { resume(el.getAttribute("data-id")); },
     startA: function () { if (cur.participant.name.trim()) go("introA"); },
     beginA: function () { go("partA", 0); },

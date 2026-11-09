@@ -166,10 +166,13 @@ details.mod > div { padding-left: 14px; border-left: 2px solid var(--rule); }
 .col-head span { color: var(--grey); }
 .pile { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px 14px; }
 .bottle { background: none; border: 0; padding: 0; cursor: pointer; text-align: center; position: relative; }
-.bottle img { height: 150px; width: auto; transition: transform .15s; }
+.bottle img { height: 150px; width: auto; margin: 0 auto; transition: transform .15s; }
 .bottle:hover img { transform: translateY(-4px); }
 .bottle .n { display: block; margin-top: 6px; font-size: .8rem; color: var(--grey); }
 .bottle.moved .n { color: var(--blue); }
+.bottle .move { display: block; margin-top: 8px; padding: 6px 10px; border-radius: 999px; background: var(--fill); font-size: .75rem; white-space: nowrap; transition: background .12s, color .12s; }
+.bottle:hover .move, .bottle:focus-visible .move { background: var(--ink); color: #fff; }
+.pile { gap: 24px 16px; }
 
 /* ---------- Ranking ---------- */
 .rank-wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 420px); gap: clamp(24px, 5vw, 80px); padding-top: 32px; }
@@ -278,3 +281,23 @@ th .sort.on { color: var(--ink); }
   .slot img { height: 80px; }
   .slot:not(.filled)::after { height: 72px; }
 }
+
+/* Hover preview of the full concept picture (Part B) */
+.peek {
+  position: fixed; z-index: 50; pointer-events: none; background: #fff; border-radius: 16px; padding: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.06), 0 18px 40px rgba(0,0,0,.14);
+  opacity: 0; transform: translateY(4px); transition: opacity .12s, transform .12s;
+}
+.peek.on { opacity: 1; transform: none; }
+.peek img { display: block; width: auto; height: auto; max-width: min(420px, 80vw); max-height: 300px; }
+@media (prefers-reduced-motion: reduce) { .peek { transition: none; } }
+
+/* Home: demo shortcuts + collapsible unfinished sessions */
+.demo-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 20px; }
+.demo-row .grey { margin-right: 4px; }
+.link-pill { border: 1px solid var(--rule); background: none; border-radius: 999px; height: 34px; padding: 0 14px; font-size: .85rem; cursor: pointer; transition: border-color .12s; }
+.link-pill:hover { border-color: var(--ink); }
+.resume-toggle { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; cursor: pointer; text-align: right; width: 100%; }
+.resume-toggle::after { content: " +"; color: var(--grey); font-weight: 400; }
+.resume-toggle[aria-expanded="true"]::after { content: " –"; }
+.resume-rows { margin-top: 8px; max-height: 60vh; overflow-y: auto; }
