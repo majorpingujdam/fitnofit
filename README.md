@@ -10,15 +10,14 @@ A small web app for running and recording **Activity 2: Dispensing Mechanism Exp
 
 ## Session flow
 
-| Step | Participant sees | What gets recorded |
+| Step | Participant sees | Recorded |
 |---|---|---|
-| Participant | — | Name (required), ID, moderator, note-taker, home type, household (kids/pets), products they use now, where they keep air freshener today |
-| Part A · Fit / No Fit | Pics 1–2 of each concept only, in randomized order, with no names | Fit / No Fit, reasons, where they'd put it, where they'd use it, decision time; moderator notes on whether they mentioned the mechanism unprompted |
-| Review sort | Both piles side by side, where they can tap to move any concept | Which concepts were moved, and their verdict before the move |
-| Part B · How it works | The concept, then the step-by-step image after the moderator taps **Reveal** | Gestures they tried, how smoothly it went, whether it matched what they expected, intuitive 1–5, convenient 1–5, whether it changed display intent, comments |
-| Ranking | All 11, sorted by dragging or with the arrows | Full ranking, their reasons in their own words, moderator-coded factors, whether their top pick would change where they keep air freshener |
+| Participant | Name and participant ID | Name, ID |
+| Part A · Fit / No fit | One concept at a time (pics 1–2 only), shuffled, no names | Fit / No fit, first answer, time to decide, moderator notes |
+| Review piles | Both piles side by side; tap a bottle to switch piles | Which concepts moved |
+| Part B · One line | All 11 bottles on a line from "Put it away" to "Leave it on display". They start where Part A put them (No fit left, Fit right) and can be dragged anywhere. Bottles push each other aside, so none overlap | Position of each bottle (0–100), the resulting rank (1 = furthest right), their reasons, moderator-coded factors |
 
-Keyboard shortcuts in Part A: `F` = Fit, `N` = No Fit, `→` / `←` = next / previous.
+Keyboard: in Part A press `F` for Fit, `N` for No fit, and `←` / `→` to move between concepts. In Part B, focus a bottle and use `←` / `→` to move it (hold Shift for bigger steps).
 
 ## Data
 
