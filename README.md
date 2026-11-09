@@ -15,10 +15,10 @@ A small web app for running and recording **Activity 2: Dispensing Mechanism Exp
 | Participant | Name and participant ID | Name, ID |
 | Activity 1 · Fit / No fit | One concept at a time (pics 1–2 only), shuffled, no names | Fit / No fit, first answer, time to decide, moderator notes |
 | Activity 1 · Debrief | Both piles side by side; click a sketch (or its Move button) to switch sides | Which concepts moved, and the final pile |
-| Activity 2 · Ranking | 11 numbered spots, Most Favorite (1) to Least Favorite (11), bottles in a tray above. Tap a bottle, then a spot; tap two placed bottles to swap. Hover a sketch to see the full picture | Rank 1–11 per concept, their reasons, moderator-coded factors |
-| Activity 3 · Where it goes | One concept at a time | Where in their home they'd put it, where they'd use it, moderator notes |
+| Activity 2 · Interaction expectation & preferences | One concept at a time. Left: the sketch, plus a strip of all 11 to jump between concepts. Right: "How would you pick this up, hold it, and spray it?" and "What makes you think it works that way?", then **Reveal how it works** (left switches to the step-by-step sketch; toggle Bottle / How it works), then four follow-up questions | Gestures tried, demo notes, why they expected it, compared to expectation, impression change, intuitive/confusing, what they'd change |
+| Activity 2 · Ranking | 11 numbered spots, Most Favorite (1) to Least Favorite (11). Tap a bottle, then a spot; tap two placed bottles to swap. Hover a sketch to see the full board | Rank 1–11 per concept, their reasons, moderator-coded factors |
 
-The home page has demo buttons for each activity (sample answers filled in, nothing saved).
+The home page has demo buttons (sample answers filled in, nothing saved).
 
 Keyboard: in Activity 1 press `F` for Fit, `N` for No fit, and `←` / `→` to move between concepts.
 
