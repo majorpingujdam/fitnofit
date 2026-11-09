@@ -99,7 +99,7 @@ details.mod > div { padding-left: 14px; border-left: 2px solid var(--rule); }
 @media (prefers-reduced-motion: reduce) { .reveal { animation: none; } .progress i { transition: none; } }
 
 /* ---------- Home ---------- */
-.home { min-height: calc(100vh - 56px); display: grid; grid-template-rows: auto 1fr auto; padding-top: clamp(32px, 8vh, 96px); }
+.home { min-height: calc(100vh - 56px); display: grid; grid-template-rows: auto minmax(40px, 1fr) auto; padding-top: clamp(32px, 8vh, 96px); padding-bottom: clamp(48px, 14vh, 160px); }
 .home h1 { max-width: 14ch; font-size: clamp(2.6rem, 6.4vw, 5.6rem); }
 .home .lede { margin-top: 20px; color: var(--grey); font-size: 1.1rem; }
 .home .actions { display: flex; gap: 10px; margin-top: 32px; flex-wrap: wrap; }
