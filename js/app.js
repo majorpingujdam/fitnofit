@@ -429,7 +429,7 @@
             ? '<div class="seg" role="tablist"><button class="' + (stepsOn ? "" : "on") + '" data-action="viewBottle" role="tab" aria-selected="' + !stepsOn + '">Bottle</button>' +
               '<button class="' + (stepsOn ? "on" : "") + '" data-action="viewSteps" role="tab" aria-selected="' + stepsOn + '">How it works</button></div>'
             : "") +
-          '<img class="main-img" src="' + (stepsOn ? c.full : c.hero) + '" alt="' + esc(conceptLabel(c)) + '">' +
+          '<img class="main-img" src="' + (stepsOn ? c.full : c.single) + '" alt="' + esc(conceptLabel(c)) + '">' +
           '<p class="caption">' + esc(conceptLabel(c)) + ", " + (i + 1) + " of " + C.length + "</p>" +
           '<div class="strip" aria-label="Switch concept">' + cur.order.map(function (x, k) {
             var r = (cur.interact[x] || {}).revealed;
@@ -440,20 +440,20 @@
         '<div class="panel">' +
           '<p class="grey small qlabel">Before revealing</p>' +
           '<ol class="qlist">' +
-            "<li>How would you pick it up, hold it, and spray it?</li>" +
-            "<li>Why do you think it works that way?</li>" +
+            "<li>Show me how you'd pick it up, hold it, and spray it.</li>" +
+            "<li>What makes you think it works that way?</li>" +
           "</ol>" +
           (b.revealed
             ? '<div class="reveal after-reveal"><p class="grey small qlabel">After revealing</p>' +
                 '<ol class="qlist" start="3">' +
-                  "<li>How does it compare with what you expected?</li>" +
-                  "<li>Does seeing it change your impression?</li>" +
-                  "<li>What feels intuitive or confusing?</li>" +
-                  "<li>What would you change?</li>" +
+                  "<li>Does this match what you expected?</li>" +
+                  "<li>How intuitive does it feel?</li>" +
+                  "<li>How convenient would it be to use?</li>" +
+                  "<li>Anything confusing about it?</li>" +
                 "</ol></div>"
             : '<button class="btn primary" data-action="revealB" style="margin-top:8px">Reveal how it works</button>') +
           '<details class="mod"' + (b.note ? " open" : "") + "><summary>Moderator notes</summary><div>" +
-            textarea(base + ".note", "Anything worth noting for this concept") +
+            textarea(base + ".note", "Steps, gestures, points of confusion") +
           "</div></details>" +
           '<div class="nav-row">' +
             '<button class="link" data-action="prevB">' + (i === 0 ? "Back" : "Previous concept") + "</button>" +
@@ -486,9 +486,9 @@
     var placed = C.length - tray.length;
     var pickedInSlot = picked != null && cur.slots.indexOf(picked) > -1;
     return (
-      '<div class="line-head"><p class="grey small" style="margin-bottom:12px">Activity 2, last step</p><h1>Rank them from favorite to least favorite.</h1>' +
+      '<div class="line-head"><p class="grey small" style="margin-bottom:12px">Activity 2, last step</p><h1>Rank them from most to least preferred.</h1>' +
         '<p class="grey" style="margin-top:12px">' +
-          (picked != null ? "Now tap a spot on the line." : tray.length ? "Tap a bottle, then tap a spot on the line." : "All placed. Tap two bottles to swap them.") +
+          (picked != null ? "Now tap a spot on the line." : tray.length ? "Drag each bottle onto a spot on the line." : "All placed. Drag a bottle onto another to swap them.") +
         "</p></div>" +
 
       '<div class="tray' + (tray.length ? "" : " empty") + (pickedInSlot ? " can-drop" : "") + '"' + (pickedInSlot ? ' data-action="toTray" title="Put it back"' : "") + ">" +
@@ -497,13 +497,13 @@
               return '<button type="button" class="tray-bottle' + (picked === id ? " picked" : "") + '" data-action="pickBottle" data-id="' + id + '" data-peek="' + byId[id].full + '" aria-pressed="' + (picked === id) + '" aria-label="' + esc(conceptLabel(byId[id])) + '">' +
                 '<img src="' + byId[id].shelf + '" alt=""></button>';
             }).join("")
-          : '<p class="tray-empty">' + (pickedInSlot ? "Tap here to take it off the line" : "To take a bottle off the line, tap it, then tap here.") + "</p>") +
+          : '<p class="tray-empty">' + (pickedInSlot ? "Tap here to take it off the line" : "Drag a bottle back here to take it off the line.") + "</p>") +
       "</div>" +
 
       '<div class="slots' + (picked != null ? " armed" : "") + '">' +
         cur.slots.map(function (id, i) {
           var label = "Spot " + (i + 1) + (id != null ? ", " + conceptLabel(byId[id]) : ", empty");
-          return '<button type="button" class="slot' + (id != null ? " filled" : "") + (id != null && picked === id ? " picked" : "") + '" data-action="slot" data-i="' + i + '"' + (id != null ? ' data-peek="' + byId[id].full + '"' : "") + ' aria-label="' + esc(label) + '">' +
+          return '<button type="button" class="slot' + (id != null ? " filled" : "") + (id != null && picked === id ? " picked" : "") + '" data-action="slot" data-i="' + i + '"' + (id != null ? ' data-id="' + id + '"' : "") + (id != null ? ' data-peek="' + byId[id].full + '"' : "") + ' aria-label="' + esc(label) + '">' +
             (id != null ? '<img src="' + byId[id].shelf + '" alt=""><span class="cid">' + id + "</span>" : "") +
             '<span class="pos">' + (i + 1) + "</span></button>";
         }).join("") +
@@ -511,7 +511,7 @@
       '<div class="line-ends"><span>Most Favorite</span><span>Least Favorite</span></div>' +
 
       '<div class="line-foot">' +
-        '<div class="block"><label class="field"><span>What made you rank them this way?</span>' + textarea("rankWhy", "Their words. Don't suggest criteria.") + "</label></div>" +
+        '<div class="block"><label class="field"><span>What influenced your ranking?</span>' + textarea("rankWhy", "Let them name the factors. Don't suggest criteria.") + "</label></div>" +
         '<details class="mod"' + ((cur.rankFactors || []).length ? " open" : "") + "><summary>Moderator: factors they mentioned</summary><div>" +
           chips("rankFactors", O.rankFactors) +
         "</div></details>" +
@@ -774,15 +774,94 @@
     if (peekEl) peekEl.classList.remove("on");
   }
 
+  // The preview waits for the mouse to rest on a sketch, so it never gets in the way of dragging or tapping.
+  var peekTimer = null;
   document.addEventListener("pointerover", function (e) {
-    if (e.pointerType !== "mouse") return;
+    if (e.pointerType !== "mouse" || rankDrag) return;
     var t = e.target.closest && e.target.closest("[data-peek]");
-    if (t && t !== peekFor) showPeek(t);
+    if (!t || t === peekFor) return;
+    clearTimeout(peekTimer);
+    peekTimer = setTimeout(function () { if (!rankDrag) showPeek(t); }, 450);
   });
   document.addEventListener("pointerout", function (e) {
     var t = e.target.closest && e.target.closest("[data-peek]");
-    if (t && !(e.relatedTarget && t.contains(e.relatedTarget))) hidePeek();
+    if (t && !(e.relatedTarget && t.contains(e.relatedTarget))) { clearTimeout(peekTimer); hidePeek(); }
   });
+  document.addEventListener("pointerdown", function () { clearTimeout(peekTimer); hidePeek(); }, true);
+
+  /* ------------------------------------------------------------------ ranking drag and drop */
+
+  // Drag a bottle from the tray onto a spot, between spots (swaps), or back to the tray.
+  // A press that doesn't move still counts as a tap, so tap-to-place keeps working.
+  var rankDrag = null, suppressClick = false;
+
+  function dropBottle(id, target) {
+    var from = cur.slots.indexOf(id);
+    if (target.classList.contains("slot")) {
+      var i = Number(target.getAttribute("data-i")), occupant = cur.slots[i];
+      if (occupant === id) return false;
+      cur.slots[i] = id;
+      if (from > -1) cur.slots[from] = occupant;   // swap; a bottle bumped by a tray bottle goes back to the tray
+    } else if (target.classList.contains("tray")) {
+      if (from < 0) return false;
+      cur.slots[from] = null;
+    }
+    picked = null;
+    syncRanking(); touch();
+    return true;
+  }
+
+  document.addEventListener("pointerdown", function (e) {
+    if (view !== "line" || !cur || e.button > 0) return;
+    var src = e.target.closest(".tray-bottle, .slot.filled");
+    if (!src) return;
+    var id = Number(src.getAttribute("data-id") || cur.slots[Number(src.getAttribute("data-i"))]);
+    rankDrag = { id: id, src: src, x: e.clientX, y: e.clientY, moving: false, ghost: null, over: null };
+  });
+
+  document.addEventListener("pointermove", function (e) {
+    var d = rankDrag;
+    if (!d) return;
+    if (!d.moving) {
+      if (Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 6) return;
+      d.moving = true;
+      hidePeek();
+      d.ghost = document.createElement("img");
+      d.ghost.className = "drag-ghost";
+      d.ghost.src = byId[d.id].shelf;
+      document.body.appendChild(d.ghost);
+      d.src.classList.add("drag-src");
+      document.body.classList.add("is-dragging");
+    }
+    e.preventDefault();
+    d.ghost.style.left = e.clientX + "px";
+    d.ghost.style.top = e.clientY + "px";
+    var under = document.elementFromPoint(e.clientX, e.clientY);
+    var over = under && under.closest(".slot, .tray");
+    if (over !== d.over) {
+      if (d.over) d.over.classList.remove("drop-over");
+      if (over) over.classList.add("drop-over");
+      d.over = over;
+    }
+  });
+
+  function endDrag() {
+    var d = rankDrag;
+    rankDrag = null;
+    if (!d || !d.moving) return;          // plain tap: let the click handler place it
+    suppressClick = true;
+    setTimeout(function () { suppressClick = false; }, 0);
+    if (d.ghost) d.ghost.remove();
+    document.body.classList.remove("is-dragging");
+    var changed = d.over ? dropBottle(d.id, d.over) : false;
+    render(true);
+    if (!changed) syncRanking();
+  }
+  document.addEventListener("pointerup", endDrag);
+  document.addEventListener("pointercancel", endDrag);
+  document.addEventListener("click", function (e) {
+    if (suppressClick) { e.stopPropagation(); e.preventDefault(); suppressClick = false; }
+  }, true);
   window.addEventListener("scroll", hidePeek, { passive: true });
 
   /* ------------------------------------------------------------------ events */

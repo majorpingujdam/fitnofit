@@ -346,3 +346,16 @@ th .sort.on { color: var(--ink); }
 .qlist li:last-child { border-bottom: 1px solid var(--rule); }
 .qlist li::before { content: counter(q); position: absolute; left: 0; top: 16px; font-size: .85rem; font-weight: 500; color: var(--grey); font-variant-numeric: tabular-nums; }
 .after-reveal { margin-top: 12px; padding-top: 0; border-top: 0; }
+
+/* Ranking: drag and drop */
+.tray-bottle, .slot.filled { touch-action: none; }
+.tray-bottle img, .slot img { -webkit-user-drag: none; user-select: none; }
+.is-dragging, .is-dragging * { cursor: grabbing !important; user-select: none; }
+.drag-ghost { position: fixed; z-index: 60; height: 140px; width: auto; pointer-events: none; transform: translate(-50%, -55%) rotate(-2deg);
+  filter: drop-shadow(0 12px 16px rgba(0,0,0,.18)); }
+.drag-src img { opacity: .25; }
+.slot.drop-over:not(.filled)::after { border-color: var(--blue); background: var(--blue-soft); }
+.slot.filled.drop-over img { opacity: .45; }
+.slot.filled.drop-over::before { content: "Swap"; position: absolute; top: 40%; left: 50%; transform: translateX(-50%); z-index: 2;
+  font-size: .75rem; background: var(--blue); color: #fff; padding: 3px 8px; border-radius: 99px; height: auto; width: auto; bottom: auto; }
+.tray.drop-over { background: var(--blue-soft); }
