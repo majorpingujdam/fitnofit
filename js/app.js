@@ -438,22 +438,23 @@
           }).join("") + "</div>" +
         "</div>" +
         '<div class="panel">' +
-          '<p class="grey small" style="margin-bottom:8px">Before revealing</p>' +
-          q("“How would you pick this up, hold it, and spray it?”",
-            '<p class="grey small" style="margin:-4px 0 10px">Moderator records what they do.</p>' + chips(base + ".gestures", O.gestures) +
-            '<div style="margin-top:10px">' + textarea(base + ".demo", "Grip, steps, where they looked for the nozzle") + "</div>") +
-          q("“What makes you think it works that way?”", textarea(base + ".why", "")) +
-          (b.revealed ? "" : '<div class="block"><button class="btn primary" data-action="revealB">Reveal how it works</button></div>') +
+          '<p class="grey small qlabel">Before revealing</p>' +
+          '<ol class="qlist">' +
+            "<li>How would you pick it up, hold it, and spray it?</li>" +
+            "<li>Why do you think it works that way?</li>" +
+          "</ol>" +
           (b.revealed
-            ? '<div class="reveal after-reveal"><p class="grey small" style="margin-bottom:8px">After revealing</p>' +
-                q("“How does that compare with what you expected?”", chips(base + ".compare", ["Same as expected", "Partly", "Different"], { single: true }) +
-                  '<div style="margin-top:10px">' + textarea(base + ".compareNote", "") + "</div>") +
-                q("“How does seeing the interaction change your impression of the product?”", chips(base + ".impression", ["Better", "No change", "Worse"], { single: true }) +
-                  '<div style="margin-top:10px">' + textarea(base + ".impressionNote", "") + "</div>") +
-                q("“What feels intuitive or confusing about this interaction?”", textarea(base + ".intuitive", "")) +
-                q("“What, if anything, would you change?”", textarea(base + ".change", "")) +
-              "</div>"
-            : "") +
+            ? '<div class="reveal after-reveal"><p class="grey small qlabel">After revealing</p>' +
+                '<ol class="qlist" start="3">' +
+                  "<li>How does it compare with what you expected?</li>" +
+                  "<li>Does seeing it change your impression?</li>" +
+                  "<li>What feels intuitive or confusing?</li>" +
+                  "<li>What would you change?</li>" +
+                "</ol></div>"
+            : '<button class="btn primary" data-action="revealB" style="margin-top:8px">Reveal how it works</button>') +
+          '<details class="mod"' + (b.note ? " open" : "") + "><summary>Moderator notes</summary><div>" +
+            textarea(base + ".note", "Anything worth noting for this concept") +
+          "</div></details>" +
           '<div class="nav-row">' +
             '<button class="link" data-action="prevB">' + (i === 0 ? "Back" : "Previous concept") + "</button>" +
             (i < C.length - 1
@@ -556,9 +557,7 @@
         avgRank: avg(ranks), firsts: ranks.filter(function (r) { return r === 1; }).length,
         top3: ranks.filter(function (r) { return r <= 3; }).length,
         moved: A.filter(function (a) { return a.beforeBoard && a.beforeBoard !== a.verdict; }).length,
-        asExpected: share(S, c.id, "compare", "Same as expected"),
-        better: share(S, c.id, "impression", "Better"),
-        worse: share(S, c.id, "impression", "Worse")
+        revealed: S.filter(function (s) { return ((s.interact || {})[c.id] || {}).revealed; }).length
       };
     });
   }
@@ -616,14 +615,14 @@
 
       '<div class="section"><h3>By concept</h3><div class="table-wrap"><table><thead><tr>' +
         th("id", "Concept", false) + th("fitRate", "Fit rate", false) + th("avgRank", "Avg rank", true) + th("firsts", "Ranked first", true) + th("top3", "In top 3", true) +
-        th("asExpected", "As expected", true) + th("better", "Impression better", true) + th("worse", "Impression worse", true) +
+
         "</tr></thead><tbody>" +
         sorted.map(function (r) {
           return "<tr>" +
             '<td><div class="c-cell"><img src="' + r.c.shelf + '" alt=""><span>' + r.c.id + ". " + esc(r.c.name) + "<small>" + esc(r.c.concealment) + "</small></span></div></td>" +
             "<td>" + bar(r.fitRate) + '<span class="grey small">' + (r.n ? r.fit + " of " + r.n + (r.moved ? ", " + r.moved + " moved" : "") : "") + "</span></td>" +
             '<td class="num">' + fmt(r.avgRank) + '</td><td class="num">' + r.firsts + '</td><td class="num">' + r.top3 + "</td>" +
-            '<td class="num">' + pct(r.asExpected) + '</td><td class="num">' + pct(r.better) + '</td><td class="num">' + pct(r.worse) + "</td>" +
+
           "</tr>";
         }).join("") + "</tbody></table></div>" +
         '<p class="grey small" style="margin-top:12px">Rank 1 is the most favorite. Rankings count finished sessions only.</p></div>' +
@@ -679,8 +678,7 @@
       "concept_id", "concept_name", "concealment", "family", "order_position",
       "A_verdict", "A_first_verdict", "A_verdict_before_board", "A_moved_on_board", "A_decision_seconds",
       "A_mentioned_mechanism", "A_note",
-      "B_tried_gestures", "B_demo_note", "B_why_it_works_that_way", "B_compared_to_expected", "B_compare_note",
-      "B_impression_change", "B_impression_note", "B_intuitive_or_confusing", "B_would_change",
+      "B_revealed", "B_moderator_notes",
       "B_rank", "B_rank_reasons", "B_rank_factors_coded", "board_note"
     ];
     var lines = [head.join(",")];
@@ -699,7 +697,7 @@
           a.beforeBoard ? (a.beforeBoard !== a.verdict ? "yes" : "no") : "",
           a.ms != null ? (a.ms / 1000).toFixed(1) : "",
           a.mentionedMechanism, a.note,
-          ix.gestures, ix.demo, ix.why, ix.compare, ix.compareNote, ix.impression, ix.impressionNote, ix.intuitive, ix.change,
+          ix.revealed ? "yes" : "", ix.note,
           s.status === "complete" && r > -1 ? r + 1 : "", s.rankWhy, s.rankFactors,
           s.boardNote
         ].map(csvCell).join(","));

@@ -336,3 +336,13 @@ th .sort.on { color: var(--ink); }
 
 /* Activity 1: one closed bottle, centred */
 .stimulus.single img { max-height: calc(100vh - 170px); }
+
+/* Activity 2: questions only */
+.qlabel { margin-bottom: 14px; }
+.qlist { margin: 0 0 28px; padding: 0; list-style: none; counter-reset: q; }
+.qlist[start="3"] { counter-reset: q 2; }
+.qlist li { counter-increment: q; position: relative; padding: 14px 0 14px 40px; border-top: 1px solid var(--rule);
+  font-size: clamp(1.15rem, 1.7vw, 1.45rem); font-weight: 500; letter-spacing: -0.015em; line-height: 1.3; }
+.qlist li:last-child { border-bottom: 1px solid var(--rule); }
+.qlist li::before { content: counter(q); position: absolute; left: 0; top: 16px; font-size: .85rem; font-weight: 500; color: var(--grey); font-variant-numeric: tabular-nums; }
+.after-reveal { margin-top: 12px; padding-top: 0; border-top: 0; }
