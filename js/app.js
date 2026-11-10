@@ -110,6 +110,10 @@
   }
   function fmt(n, d) { return n == null ? "—" : n.toFixed(d == null ? 1 : d); }
   function pct(n) { return n == null ? "—" : Math.round(n * 100) + "%"; }
+  // Participant-facing label: concept numbers stay hidden (they appear only in Results / CSV).
+  // Shows the concept name only if "Show concept names" is on in Settings.
+  function shownLabel(c) { return store.settings.showNames ? c.name : ""; }
+
   function conceptLabel(c) {
     return store.settings.showNames ? "Concept " + c.id + " · " + c.name : "Concept " + c.id;
   }
@@ -350,7 +354,7 @@
     var a = cur.partA[id] || {};
     return (
       '<div class="eval">' +
-        '<div class="stimulus single"><img src="' + c.single + '" alt="' + esc(conceptLabel(c)) + '"><p class="caption">' + esc(conceptLabel(c)) + "</p></div>" +
+        '<div class="stimulus single"><img src="' + c.single + '" alt="' + esc(conceptLabel(c)) + '"><p class="caption">' + esc(shownLabel(c)) + "</p></div>" +
         '<div class="panel">' +
           "<h2>Would you leave this out on display at home?</h2>" +
           '<div class="verdict">' +
@@ -375,7 +379,7 @@
     var c = byId[id], v = (cur.partA[id] || {}).verdict;
     var to = v === "fit" ? "No fit" : "Fit";
     return '<button type="button" class="bottle' + (moved ? " moved" : "") + '" data-action="flip" data-id="' + id + '" aria-label="Move ' + esc(conceptLabel(c)) + " to " + to + '">' +
-      '<img src="' + c.shelf + '" alt=""><span class="n">' + (store.settings.showNames ? esc(c.name) : id) + (moved ? ", moved" : "") + "</span>" +
+      '<img src="' + c.shelf + '" alt=""><span class="n">' + esc([shownLabel(c), moved ? "Moved" : ""].filter(Boolean).join(", ")) + "</span>" +
       '<span class="move">' + (v === "fit" ? "Move to No fit →" : "← Move to Fit") + "</span></button>";
   }
 
@@ -430,7 +434,7 @@
               '<button class="' + (stepsOn ? "on" : "") + '" data-action="viewSteps" role="tab" aria-selected="' + stepsOn + '">How it works</button></div>'
             : "") +
           '<img class="main-img" src="' + (stepsOn ? c.full : c.single) + '" alt="' + esc(conceptLabel(c)) + '">' +
-          '<p class="caption">' + esc(conceptLabel(c)) + ", " + (i + 1) + " of " + C.length + "</p>" +
+          '<p class="caption">' + esc([shownLabel(c), (i + 1) + " of " + C.length].filter(Boolean).join(", ")) + "</p>" +
           '<div class="strip" aria-label="Switch concept">' + cur.order.map(function (x, k) {
             var r = (cur.interact[x] || {}).revealed;
             return '<button type="button" class="strip-item' + (k === i ? " on" : "") + (r ? " done" : "") + '" data-action="gotoB" data-i="' + k + '" aria-label="' + esc(conceptLabel(byId[x])) + (r ? ", done" : "") + '">' +
@@ -504,7 +508,7 @@
         cur.slots.map(function (id, i) {
           var label = "Spot " + (i + 1) + (id != null ? ", " + conceptLabel(byId[id]) : ", empty");
           return '<button type="button" class="slot' + (id != null ? " filled" : "") + (id != null && picked === id ? " picked" : "") + '" data-action="slot" data-i="' + i + '"' + (id != null ? ' data-id="' + id + '"' : "") + (id != null ? ' data-peek="' + byId[id].full + '"' : "") + ' aria-label="' + esc(label) + '">' +
-            (id != null ? '<img src="' + byId[id].shelf + '" alt=""><span class="cid">' + id + "</span>" : "") +
+            (id != null ? '<img src="' + byId[id].shelf + '" alt="">' : "") +
             '<span class="pos">' + (i + 1) + "</span></button>";
         }).join("") +
       "</div>" +
@@ -529,7 +533,7 @@
         "<h1>Thank you, " + esc(cur.participant.name) + ".</h1>" +
         '<p class="grey-lede">Everything is saved on this device. ' + fits + " of " + C.length + " went in the Fit pile. Their top three:</p>" +
         '<div class="done-row">' + cur.ranking.slice(0, 3).map(function (id, i) {
-          return '<figure><img src="' + byId[id].shelf + '" alt=""><figcaption>' + (i + 1) + ". Concept " + id + "</figcaption></figure>";
+          return '<figure><img src="' + byId[id].shelf + '" alt=""><figcaption>' + (i + 1) + "</figcaption></figure>";
         }).join("") + "</div>" +
         '<div class="row" style="display:flex;gap:10px"><button class="btn primary" data-action="new">Start next session</button>' +
         '<button class="btn" data-action="results">See results</button></div>' +

@@ -359,3 +359,6 @@ th .sort.on { color: var(--ink); }
 .slot.filled.drop-over::before { content: "Swap"; position: absolute; top: 40%; left: 50%; transform: translateX(-50%); z-index: 2;
   font-size: .75rem; background: var(--blue); color: #fff; padding: 3px 8px; border-radius: 99px; height: auto; width: auto; bottom: auto; }
 .tray.drop-over { background: var(--blue-soft); }
+
+.bottle .n:empty { display: none; }
+.stimulus .caption:empty { display: none; }
