@@ -24,6 +24,8 @@ Keyboard: in Activity 1 press `F` for Fit, `N` for No fit, and `←` / `→` to 
 
 ## Data
 
+- **Results → a participant's name (or View)** opens that person's full session: their final Fit / No fit piles (with debrief moves and decision times), the list of debrief changes, their 1–11 ranking with their reasons, Activity 2 reveals and notes, and Activity 1 moderator notes. **Print** gives a one-person summary.
+
 - Every tap is autosaved in this browser's `localStorage`. Sessions survive a refresh, and an unfinished session can be resumed from the home screen.
 - **Results** shows Fit rate, average rank, expectation match, intuitiveness and convenience, broken down by concept and by concealment level.
 - **Export CSV** gives one row per participant × concept, ready for Excel or Sheets.

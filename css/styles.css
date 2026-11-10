@@ -363,3 +363,27 @@ th .sort.on { color: var(--ink); }
 
 .bottle .n:empty { display: none; }
 .stimulus .caption:empty { display: none; }
+
+/* ---------- One participant's results ---------- */
+.plink { color: var(--ink); font-size: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rule); }
+.plink:hover { text-decoration-color: var(--ink); }
+.pcols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 clamp(16px, 4vw, 56px); }
+.pcols > div + div { border-left: 1px solid var(--rule); padding-left: clamp(16px, 4vw, 56px); }
+@media (max-width: 760px) { .pcols { grid-template-columns: 1fr; } .pcols > div + div { border-left: 0; padding-left: 0; margin-top: 24px; } }
+.pgrid { display: flex; flex-wrap: wrap; gap: 18px 16px; align-items: flex-start; }
+.ptile { margin: 0; width: 104px; text-align: center; }
+.ptile img { height: 120px; width: auto; margin: 0 auto 8px; }
+.ptile figcaption { font-size: .78rem; line-height: 1.35; }
+.ptile figcaption .grey { display: block; font-size: .72rem; margin-top: 2px; }
+.prank { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 8px; border-bottom: 2px solid var(--ink); padding-bottom: 12px; }
+.prank li { display: flex; flex-direction: column; align-items: center; }
+.prank .pos { font-weight: 600; font-size: 1.1rem; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+.prank .ptile { width: 100%; }
+.prank .ptile img { height: 110px; max-width: 100%; object-fit: contain; }
+@media (max-width: 900px) { .prank { grid-template-columns: repeat(4, 1fr); row-gap: 20px; } }
+.prank-ends { display: flex; justify-content: space-between; margin-top: 8px; font-size: .85rem; color: var(--grey); }
+.plist { margin: 0; padding: 0; list-style: none; max-width: 760px; }
+.plist li { padding: 10px 0; border-top: 1px solid var(--rule); line-height: 1.45; }
+.plist li:last-child { border-bottom: 1px solid var(--rule); }
+.pnote { margin-top: 16px; max-width: 760px; line-height: 1.5; }
+@media print { .ptile img { height: 80px; } .section { break-inside: avoid; } }

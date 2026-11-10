@@ -4,6 +4,8 @@
  * steps = step-by-step illustration. Only revealed in Part B.
  * Names and concealment levels are hidden from participants by default.
  */
+var IMG_VERSION = 2;   // concept 2 board updated
+
 window.CONCEPTS = [
   { id: 1,  name: "Top-Twist Cap Finger Pump",        concealment: "Fully concealed",     family: "Finger pump" },
   { id: 2,  name: "Bottom-Twist Finger Pump",         concealment: "Fully concealed",     family: "Finger pump" },
@@ -18,11 +20,12 @@ window.CONCEPTS = [
   { id: 11, name: "Integrated Top-Press Spray",       concealment: "Fully concealed",     family: "Top press" }
 ].map(function (c) {
   var n = String(c.id).padStart(2, "0");
-  c.hero = "images/c" + n + "-hero.jpg";
-  c.steps = "images/c" + n + "-steps.jpg";
-  c.shelf = "images/c" + n + "-shelf.jpg";
-  c.single = "images/c" + n + "-single.jpg"; // one closed bottle (Activity 1 Fit / No fit)
-  c.full = "images/c" + n + "-full.jpg";   // whole board: both bottles + how it works (ranking hover preview)
+  var v = "?v=" + IMG_VERSION;   // bump IMG_VERSION when an image file is replaced
+  c.hero = "images/c" + n + "-hero.jpg" + v;
+  c.steps = "images/c" + n + "-steps.jpg" + v;
+  c.shelf = "images/c" + n + "-shelf.jpg" + v;
+  c.single = "images/c" + n + "-single.jpg" + v; // one closed bottle (Activity 1 Fit / No fit)
+  c.full = "images/c" + n + "-full.jpg" + v;     // whole board: both bottles + how it works
   return c;
 });
 

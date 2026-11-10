@@ -635,10 +635,11 @@
         (S.length ? '<div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Date</th><th>Status</th><th class="num">Fit</th><th>Top pick</th><th></th></tr></thead><tbody>' +
           S.slice().reverse().map(function (s) {
             var fits = Object.keys(s.partA).filter(function (k) { return s.partA[k].verdict === "fit"; }).length;
-            return "<tr><td>" + esc(s.participant.pid) + "</td><td>" + esc(s.participant.name) + "</td><td>" + dateStr(s.createdAt) +
+            return '<tr class="prow"><td>' + esc(s.participant.pid) + '</td><td><button class="link plink" data-action="viewParticipant" data-id="' + esc(s.id) + '">' + esc(s.participant.name || "No name") + "</button></td><td>" + dateStr(s.createdAt) +
               '</td><td><span class="status ' + (s.status === "complete" ? "complete" : "") + '">' + (s.status === "complete" ? "Finished" : esc(stepLabelFor(s))) + "</span></td>" +
               '<td class="num">' + fits + "</td><td>" + (s.status === "complete" && s.ranking.length ? "Concept " + s.ranking[0] : "") + "</td>" +
               '<td class="num"><div style="display:flex;gap:6px;justify-content:flex-end">' +
+                '<button class="btn primary" data-action="viewParticipant" data-id="' + esc(s.id) + '">View</button>' +
                 '<button class="btn" data-action="resume" data-id="' + esc(s.id) + '">' + (s.status === "complete" ? "Open" : "Resume") + "</button>" +
                 '<button class="btn danger ' + (armedDelete === s.id ? "armed" : "") + '" data-action="delete" data-id="' + esc(s.id) + '">' + (armedDelete === s.id ? "Delete for good" : "Delete") + "</button>" +
               "</div></td></tr>";
@@ -651,6 +652,99 @@
         '<div class="toggle-row"><div>Show concept names to participants<p>Off by default, so names like “Fully concealed” don\'t steer answers.</p></div>' +
           '<button class="switch ' + (store.settings.showNames ? "on" : "") + '" role="switch" aria-checked="' + !!store.settings.showNames + '" aria-label="Show concept names" data-action="setting" data-key="showNames"></button></div>' +
       "</div>"
+    );
+  };
+
+  /* ------------------------------------------------------------------ one participant's results */
+
+  var viewSid = null;   // session shown on the participant page
+
+  function vLabel(v) { return v === "fit" ? "Fit" : v === "nofit" ? "No fit" : "—"; }
+
+  function conceptTile(id, sub) {
+    var c = byId[id];
+    return '<figure class="ptile"><img src="' + c.shelf + '" alt="" data-peek="' + c.full + '">' +
+      "<figcaption><b>" + id + "</b> " + esc(c.name) + (sub ? '<span class="grey">' + sub + "</span>" : "") + "</figcaption></figure>";
+  }
+
+  VIEWS.participant = function () {
+    var s = store.sessions.filter(function (x) { return x.id === viewSid; })[0];
+    if (!s) return '<p class="empty" style="padding-top:40px">That session is no longer on this device. <button class="link" data-action="results">Back to results</button></p>';
+    var p = s.participant, A = s.partA || {}, I = s.interact || {};
+    var ids = s.order && s.order.length ? s.order : C.map(function (c) { return c.id; });
+    var fits = ids.filter(function (id) { return (A[id] || {}).verdict === "fit"; });
+    var nos = ids.filter(function (id) { return (A[id] || {}).verdict === "nofit"; });
+    var moved = ids.filter(function (id) { var a = A[id] || {}; return a.beforeBoard && a.beforeBoard !== a.verdict; });
+    var ranking = (s.ranking || []).filter(function (id) { return byId[id]; });
+    var revealed = ids.filter(function (id) { return (I[id] || {}).revealed; });
+    var notesA = ids.filter(function (id) { return (A[id] || {}).note || (A[id] || {}).mentionedMechanism; });
+    var notesB = ids.filter(function (id) { return (I[id] || {}).note; });
+
+    function pile(list) {
+      return list.length ? '<div class="pgrid">' + list.map(function (id) {
+        var a = A[id] || {}, bits = [];
+        if (a.beforeBoard && a.beforeBoard !== a.verdict) bits.push("moved from " + vLabel(a.beforeBoard));
+        if (a.ms != null) bits.push((a.ms / 1000).toFixed(1) + "s to decide");
+        return conceptTile(id, bits.join(", "));
+      }).join("") + "</div>" : '<p class="grey small">None</p>';
+    }
+
+    return (
+      '<div class="results-head"><div>' +
+        '<p class="grey small" style="margin-bottom:8px"><button class="link" data-action="results">← All results</button></p>' +
+        "<h1>" + esc(p.name || "No name") + "</h1>" +
+        '<p class="summary">' + esc(p.pid) + ", " + dateStr(s.createdAt) + " " + timeStr(s.createdAt) + ". " +
+          (s.status === "complete" ? "<b>Finished</b>." : "In progress: " + esc(stepLabelFor(s)) + ".") +
+          " " + fits.length + " Fit, " + nos.length + " No fit" + (moved.length ? ", " + moved.length + " moved in the debrief" : "") + ".</p>" +
+      "</div>" +
+      '<div class="no-print" style="display:flex;gap:8px;flex-wrap:wrap">' +
+        '<button class="btn" data-action="resume" data-id="' + esc(s.id) + '">' + (s.status === "complete" ? "Open session" : "Resume session") + "</button>" +
+        '<button class="btn" data-action="printPage">Print</button>' +
+      "</div></div>" +
+
+      '<div class="section"><h3>Activity 1 · Fit / No fit, after the debrief</h3>' +
+        '<div class="pcols">' +
+          '<div><div class="col-head"><h2>Fit</h2><span>' + fits.length + "</span></div>" + pile(fits) + "</div>" +
+          '<div><div class="col-head"><h2>No fit</h2><span>' + nos.length + "</span></div>" + pile(nos) + "</div>" +
+        "</div>" +
+      "</div>" +
+
+      '<div class="section"><h3>Debrief changes</h3>' +
+        (moved.length
+          ? '<ul class="plist">' + moved.map(function (id) {
+              var a = A[id];
+              return "<li><b>Concept " + id + "</b> " + esc(byId[id].name) + ": " + vLabel(a.beforeBoard) + " → " + vLabel(a.verdict) + "</li>";
+            }).join("") + "</ul>"
+          : '<p class="grey">No changes. Every concept stayed in its first pile.</p>') +
+        (s.boardNote ? '<p class="pnote"><span class="grey small">Moderator note</span><br>' + esc(s.boardNote) + "</p>" : "") +
+      "</div>" +
+
+      '<div class="section"><h3>Activity 2 · Ranking</h3>' +
+        (ranking.length
+          ? '<ol class="prank">' + ranking.map(function (id, i) {
+              var a = A[id] || {};
+              return "<li>" + '<span class="pos">' + (i + 1) + "</span>" + conceptTile(id, vLabel(a.verdict) + " in Activity 1") + "</li>";
+            }).join("") + "</ol>" +
+            '<div class="prank-ends"><span>Most preferred</span><span>Least preferred</span></div>'
+          : '<p class="grey">Not ranked yet.</p>') +
+        (s.rankWhy ? '<p class="pnote"><span class="grey small">What influenced their ranking</span><br>' + esc(s.rankWhy) + "</p>" : "") +
+        ((s.rankFactors || []).length ? '<p class="pnote"><span class="grey small">Factors (moderator coded)</span><br>' + esc(s.rankFactors.join(", ")) + "</p>" : "") +
+      "</div>" +
+
+      '<div class="section"><h3>Activity 2 · Interaction</h3>' +
+        '<p class="grey">' + revealed.length + " of " + C.length + " concepts revealed.</p>" +
+        (notesB.length
+          ? '<ul class="plist">' + notesB.map(function (id) { return "<li><b>Concept " + id + "</b> " + esc(byId[id].name) + ": " + esc(I[id].note) + "</li>"; }).join("") + "</ul>"
+          : '<p class="grey small">No moderator notes.</p>') +
+      "</div>" +
+
+      (notesA.length
+        ? '<div class="section"><h3>Activity 1 · Moderator notes</h3><ul class="plist">' + notesA.map(function (id) {
+            var a = A[id];
+            return "<li><b>Concept " + id + "</b> " + esc(byId[id].name) + ": " +
+              esc([a.mentionedMechanism ? "Mentioned mechanism: " + a.mentionedMechanism : "", a.note || ""].filter(Boolean).join(". ")) + "</li>";
+          }).join("") + "</ul></div>"
+        : "")
     );
   };
 
@@ -877,6 +971,8 @@
     "new": function () { cur = newSession(); go("intake"); },
     demo: function (el) { startDemo(el.getAttribute("data-step")); },
     toggleOpen: function () { showOpen = !showOpen; render(true); },
+    viewParticipant: function (el) { cur = null; viewSid = el.getAttribute("data-id"); view = "participant"; render(); window.scrollTo(0, 0); },
+    printPage: function () { window.print(); },
     clearOpen: function () {
       if (armedDelete !== "ALL_OPEN") { armedDelete = "ALL_OPEN"; render(true); return; }
       store.sessions = store.sessions.filter(function (s) { return s.status === "complete"; });
