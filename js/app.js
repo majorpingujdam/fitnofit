@@ -350,7 +350,7 @@
     var a = cur.partA[id] || {};
     return (
       '<div class="eval">' +
-        '<div class="stimulus"><img src="' + c.hero + '" alt="' + esc(conceptLabel(c)) + '"><p class="caption">' + esc(conceptLabel(c)) + "</p></div>" +
+        '<div class="stimulus single"><img src="' + c.single + '" alt="' + esc(conceptLabel(c)) + '"><p class="caption">' + esc(conceptLabel(c)) + "</p></div>" +
         '<div class="panel">' +
           "<h2>Would you leave this out on display at home?</h2>" +
           '<div class="verdict">' +
@@ -1006,6 +1006,6 @@
   load();
   updateBanner();
   // Warm the image cache so concepts appear instantly during sessions.
-  C.forEach(function (c) { var i = new Image(); i.src = c.hero; });
+  C.forEach(function (c) { var i = new Image(); i.src = c.single; });
   render();
 })();
