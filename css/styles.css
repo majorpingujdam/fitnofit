@@ -335,7 +335,8 @@ th .sort.on { color: var(--ink); }
 .strip-item.done::after { content: ""; position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
 
 /* Activity 1: one closed bottle, centred */
-.stimulus.single img { max-height: calc(100vh - 170px); }
+.stimulus.single { padding-top: clamp(24px, 6vh, 64px); }
+.stimulus.single img { max-height: calc(100vh - 220px); }
 
 /* Activity 2: questions only */
 .qlabel { margin-bottom: 14px; }
